@@ -1,10 +1,10 @@
 import React from 'react';
-import './Button.scss';
+import styles from './Button.module.scss';
 
 export default class Button extends React.Component {
     render() {
         return (
-            <button className="my-button">ABC</button>
+            <button className={styles['my-button']}>ABC</button>
         );
     }
 }

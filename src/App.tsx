@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.scss';
-import Button from './Button/Button';
+import Button from './components/Button/Button';
 
 export default class App extends React.Component {
     render() {
@@ -20,9 +20,9 @@ export default class App extends React.Component {
                     >
                         Learn React
                     </a>
-                </header>
                 <Button />
                 <button className="my-button">DEF</button>
+                </header>
             </div>
         );
     }
