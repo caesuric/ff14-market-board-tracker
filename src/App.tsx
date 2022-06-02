@@ -1,23 +1,16 @@
 import { animated, useTransition } from '@react-spring/web';
+import Sidebar from 'components/Sidebar/Sidebar';
 import React from 'react';
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
-import About from 'views/About';
-import Home from 'views/Home';
+import About from 'views/About/About';
+import Home from 'views/Home/Home';
+import styles from './App.module.scss';
 
 export default function App() {
     return (
         <BrowserRouter>
-            <div className="App">
-                <nav>
-                    <ul>
-                        <li>
-                            <Link to="/">Home</Link>
-                        </li>
-                        <li>
-                            <Link to="/about">About</Link>
-                        </li>
-                    </ul>
-                </nav>
+            <div className={styles.App}>
+                <Sidebar />
                 <Content />
             </div>
         </BrowserRouter>
