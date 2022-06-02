@@ -29,6 +29,7 @@
     "@typescript-eslint/parser": "^5.26.0",
     "enzyme": "^3.11.0",
     "eslint": "^8.16.0",
+    "generate-react-cli": "^7.1.1",
     "react-docgen": "^5.4.1",
     "react-scripts": "5.0.1",
     "sass": "^1.52.1",
