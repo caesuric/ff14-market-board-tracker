@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import styles from './home.module.scss';
-import Button from 'components/Button';
+import Button from 'components/Button/Button';
 
 export default function Home() {
     return (
