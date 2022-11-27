@@ -1,12 +1,12 @@
 import React from 'react';
 import { shallow } from 'enzyme';
-import Sidebar from './Sidebar';
+import Main from './Main';
 
-describe('<Sidebar />', () => {
+describe('<Main />', () => {
   let component;
 
   beforeEach(() => {
-    component = shallow(<Sidebar />);
+    component = shallow(<Main />);
   });
 
   test('It should mount', () => {
