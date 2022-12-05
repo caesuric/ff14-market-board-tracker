@@ -2,7 +2,7 @@ import { ItemInputLine } from 'components/ItemInputLine/ItemInputLine';
 import React, { FC, useState } from 'react';
 import styles from './Main.module.scss';
 import * as uuid from 'uuid';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import { ItemInputLineData } from 'item-input-line-data';
 
 interface MainProps {}
@@ -53,6 +53,7 @@ const Main: FC<MainProps> = () => {
         setItemsToTrack([...itemsToTrack]);
         const data = await response.json();
         console.log(data);
+        if (data.entries.length === 0) continue;
         if (!!trackingItem) trackingItem.loaded2 = true;
         const lastMonthEntries = data.entries;
         let averagePricePerUnit = 0;
@@ -83,6 +84,7 @@ const Main: FC<MainProps> = () => {
     setResults([...finishedResults]);
   };
   const pullData = async () => {
+    console.log('pulling');
     const tempResults: any[] = [];
     for (let element of itemsToTrack) {
       if (!element.loaded) {
@@ -180,7 +182,7 @@ const Main: FC<MainProps> = () => {
               <button onClick={saveData}>Save</button>
           </div>
           <div className={styles.grid}>
-              <DataGrid rows={results} columns={columns} pageSize={100} />
+              <DataGrid rows={results} columns={columns} pageSize={100} components={{Toolbar: GridToolbar}}/>
           </div>
       </div>
   );};
