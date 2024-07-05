@@ -59,21 +59,24 @@ const Main: FC<MainProps> = () => {
         let averagePricePerUnit = 0;
         let numItemsSold = 0;
         const stackSizes = [];
+        const prices = [];
         for (let entry of lastMonthEntries) {
             averagePricePerUnit += entry.pricePerUnit * entry.quantity;
             numItemsSold += entry.quantity;
             stackSizes.push(entry.quantity);
+            prices.push(entry.pricePerUnit);
         }
         averagePricePerUnit /= numItemsSold;
         item.nqSaleVelocity = Math.floor(data.nqSaleVelocity);
         item.averagePrice = Math.floor(averagePricePerUnit);
+        item.medianPrice = median(prices);
         item.medianStackSize = median(stackSizes);
         let marketValue = 0;
         for (let entry of lastMonthEntries) 
             marketValue += entry.pricePerUnit * entry.quantity;
-        item.weeklyMarketValue = marketValue;
+        item.monthlyMarketValue = marketValue;
         item.possibleMoneyPerDay = Math.floor(marketValue / 30);
-        item.numberToGatherPerDay = Math.floor(item.possibleMoneyPerDay / item.averagePrice);
+        item.numberToGatherPerDay = Math.floor(item.possibleMoneyPerDay / item.medianPrice);
         finishedResults.push(item);
         setResults([...finishedResults]);
       }
@@ -128,6 +131,14 @@ const Main: FC<MainProps> = () => {
           },
       },
       {
+        field: "medianPrice",
+        headerName: "Median Price",
+        flex: 1,
+        valueFormatter: (params) => {
+            return params.value.toLocaleString() + " gil";
+        }
+      },
+      {
           field: "medianStackSize",
           headerName: "Median Stack Size",
           flex: 1,
@@ -138,7 +149,7 @@ const Main: FC<MainProps> = () => {
           flex: 1,
       },
       {
-          field: "weeklyMarketValue",
+          field: "monthlyMarketValue",
           headerName: "Monthly Market Value",
           flex: 1,
           valueFormatter: (params) => {
