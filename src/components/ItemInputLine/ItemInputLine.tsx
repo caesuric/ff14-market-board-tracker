@@ -1,7 +1,6 @@
 import { ItemInputLineData } from "item-input-line-data";
 import React, { FC, useState } from "react";
 import styles from "./ItemInputLine.module.scss";
-import CheckIcon from "@mui/icons-material/Check";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Button, Input } from "@mui/material";
