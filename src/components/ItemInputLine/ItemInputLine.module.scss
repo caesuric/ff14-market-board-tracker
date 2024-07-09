@@ -1,5 +1,7 @@
 .ItemInputLine {
   margin: 5px;
+  display: flex;
+  align-items: center;
 
   .check {
     color: lightgreen;
@@ -7,8 +9,9 @@
     padding: 5px;
   }
 
-  input {
+  .input {
     max-width: 177px;
+    min-width: 177px;
   }
 
   .minusButton {
@@ -16,5 +19,14 @@
     min-width: 11px;
     margin-left: 5px;
     margin-right: 5px;
+  }
+}
+
+.optionItem {
+  cursor: pointer;
+
+  &:hover {
+    background-color: lightskyblue;
+    color: #333333;
   }
 }

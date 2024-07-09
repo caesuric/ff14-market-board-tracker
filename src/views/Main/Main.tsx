@@ -36,11 +36,6 @@ const Main: FC<MainProps> = () => {
     });
     setItemsToTrack([...itemsToTrack]);
   };
-  const extractResult = (results: any, exactMatch: string) => {
-    for (let item of results)
-      if (item.Name.toLowerCase() === exactMatch.toLowerCase()) return item.ID;
-    return results[0].ID;
-  };
   const median = (values: number[]) => {
     if (values.length === 0) throw new Error("No inputs");
     values.sort(function (a, b) {
@@ -50,20 +45,19 @@ const Main: FC<MainProps> = () => {
     if (values.length % 2) return values[half];
     return (values[half - 1] + values[half]) / 2.0;
   };
-  const pullMarketData = async (tempResults: any[]) => {
+  const pullMarketData = async (items: ItemInputLineData[]) => {
     const finishedResults = [...results];
-    for (let item of tempResults) {
+    for (let item of items) {
       try {
         const trackingItem = itemsToTrack.find(
-          (i) => i.id === item.internalUuid
+          (i) => i.result?.ID === item.result?.ID
         );
         if (!!trackingItem && trackingItem.loaded2) continue;
         const response = await fetch(
-          `/uapi/history/ultros/${item.id}?entriesWithin=2592000`
+          `/uapi/history/ultros/${item.result?.ID}?entriesWithin=2592000`
         );
         setItemsToTrack([...itemsToTrack]);
         const data = await response.json();
-        console.log(data);
         if (data.entries.length === 0) continue;
         if (!!trackingItem) trackingItem.loaded2 = true;
         const lastMonthEntries = data.entries;
@@ -99,28 +93,7 @@ const Main: FC<MainProps> = () => {
     setResults([...finishedResults]);
   };
   const pullData = async () => {
-    console.log("pulling");
-    const tempResults: any[] = [];
-    for (let element of itemsToTrack) {
-      if (!element.loaded) {
-        const response = await fetch(`/xivapi/search?string=${element.text}`);
-        element.loaded = true;
-        setItemsToTrack([...itemsToTrack]);
-        const data = await response.json();
-        console.log(data);
-        if (data.Results.length > 0) {
-          const result = extractResult(data.Results, element.text);
-          element.ffxivId = result;
-        }
-      }
-      if (!!element.ffxivId)
-        tempResults.push({
-          id: element.ffxivId,
-          name: element.text,
-          internalUuid: element.id,
-        });
-    }
-    pullMarketData(tempResults);
+    pullMarketData(itemsToTrack);
   };
   const saveData = () => {
     const data = [];
@@ -135,7 +108,7 @@ const Main: FC<MainProps> = () => {
   };
   const columns: GridColDef[] = [
     {
-      field: "name",
+      field: "text",
       headerName: "Name",
       flex: 1,
     },
