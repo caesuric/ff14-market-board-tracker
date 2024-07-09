@@ -1,7 +1,10 @@
-import { ItemInputLineData } from 'item-input-line-data';
-import React, { FC, useState } from 'react';
-import styles from './ItemInputLine.module.scss';
-import CheckIcon from '@mui/icons-material/Check'
+import { ItemInputLineData } from "item-input-line-data";
+import React, { FC, useState } from "react";
+import styles from "./ItemInputLine.module.scss";
+import CheckIcon from "@mui/icons-material/Check";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
+import { Button, Input } from "@mui/material";
 
 interface ItemInputLineProps {
   item: ItemInputLineData;
@@ -9,25 +12,31 @@ interface ItemInputLineProps {
 }
 
 const ItemInputLine: FC<ItemInputLineProps> = (props) => {
-const [text, setText] = useState(props.item.text);
-const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [text, setText] = useState(props.item.text);
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     props.item.text = event.target.value;
     setText(props.item.text);
-}
+  };
 
-return (
+  return (
     <div className={styles.ItemInputLine}>
-        <input type="text" value={text} onChange={handleChange} />
-        <button
-            onClick={() => {
-                if (!!props.onClick) props.onClick();
-            }}
-        >
-            -
-        </button>
-        {props.item.loaded ? <CheckIcon className={styles.check} /> : null}
-        {props.item.loaded2 ? <CheckIcon className={styles.check} /> : null}
+      <Button
+        className={styles.minusButton}
+        onClick={() => {
+          if (!!props.onClick) props.onClick();
+        }}
+      >
+        <FontAwesomeIcon icon={faMinus} />
+      </Button>
+      <Input type="text" value={text} onChange={handleChange} />
+      {props.item.loaded ? (
+        <FontAwesomeIcon icon={faCheck} className={styles.check} />
+      ) : null}
+      {props.item.loaded2 ? (
+        <FontAwesomeIcon icon={faCheck} className={styles.check} />
+      ) : null}
     </div>
-);};
+  );
+};
 
 export { ItemInputLine, ItemInputLineProps };

@@ -1,6 +1,20 @@
 .ItemInputLine {
-    .check {
-        color: lightgreen;
-        vertical-align: middle;
-    }
+  margin: 5px;
+
+  .check {
+    color: lightgreen;
+    vertical-align: middle;
+    padding: 5px;
+  }
+
+  input {
+    max-width: 177px;
+  }
+
+  .minusButton {
+    max-width: 11px;
+    min-width: 11px;
+    margin-left: 5px;
+    margin-right: 5px;
+  }
 }
