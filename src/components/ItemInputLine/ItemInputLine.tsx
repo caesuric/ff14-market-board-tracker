@@ -9,9 +9,14 @@ import styles from "./ItemInputLine.module.scss";
 interface ItemInputLineProps {
   item: ItemInputLineData;
   onClick?: () => void;
+  itemSelectedCallback?: () => void;
 }
 
-const ItemInputLine: FC<ItemInputLineProps> = ({ item, onClick }) => {
+const ItemInputLine: FC<ItemInputLineProps> = ({
+  item,
+  onClick,
+  itemSelectedCallback,
+}) => {
   const [value, setValue] = useState<XivApiResult | undefined>(item.result);
   const [inputValue, setInputValue] = useState<string>(item.text);
   const [dropdownOptions, setDropdownOptions] = useState<XivApiResult[]>([]);
@@ -78,6 +83,7 @@ const ItemInputLine: FC<ItemInputLineProps> = ({ item, onClick }) => {
               item.result = newValue;
               item.ffxivId = newValue.ID.toString();
               item.text = newValue.Name;
+              if (itemSelectedCallback) itemSelectedCallback();
             }
           }}
           getOptionKey={(option: XivApiResult | string) => {

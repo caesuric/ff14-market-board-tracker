@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useCallback, useEffect, useState } from "react";
 import * as uuid from "uuid";
 import { DataGrid, GridColDef, GridToolbar } from "@mui/x-data-grid";
 import {
@@ -18,6 +18,7 @@ interface MainProps {}
 
 const Main: FC<MainProps> = () => {
   const [loaded, setLoaded] = useState<boolean>(false);
+  const [initialApiLoad, setInitialApiLoad] = useState<boolean>(false);
   const [itemsToTrack, setItemsToTrack] = useState<ItemInputLineData[]>([]);
   const [results, setResults] = useState<any[]>([]);
   const [lowestTaxRate, setLowestTaxRate] = useState<number | undefined>(
@@ -26,19 +27,10 @@ const Main: FC<MainProps> = () => {
   const [worlds, setWorlds] = useState<string[]>([]);
   const [world, setWorld] = useState<string>("");
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
-  useEffect(() => {
-    if (!loaded) {
-      const items = localStorage.getItem("itemsToTrack");
-      if (!!items) setItemsToTrack(JSON.parse(items));
-      pullWorldData();
-      setLoaded(true);
-    }
-  }, [loaded]);
-
   const pullWorldData = async () => {
     const worldDataResponse = await fetch("/uapi/worlds");
     const worldData = await worldDataResponse.json();
-    setWorlds(worldData.map((world: any) => world.name));
+    setWorlds(worldData.map((world: any) => world.name).sort());
     const loadedWorld = localStorage.getItem("world");
     if (!!loadedWorld) setWorld(loadedWorld);
   };
@@ -48,6 +40,12 @@ const Main: FC<MainProps> = () => {
       1
     );
     setItemsToTrack([...itemsToTrack]);
+    resetLoadedState();
+    pullData(itemsToTrack);
+    saveData();
+  };
+  const resetLoadedState = () => {
+    for (const item of itemsToTrack) item.loaded2 = false;
   };
   const addItemToTrack = () => {
     const itemUuid = uuid.v4();
@@ -68,89 +66,92 @@ const Main: FC<MainProps> = () => {
     if (values.length % 2) return values[half];
     return (values[half - 1] + values[half]) / 2.0;
   };
-  const calculatePostTaxSaleValue = (price: number) => {
-    if (!lowestTaxRate) return price;
-    return Math.floor(price * (1 - lowestTaxRate / 100));
-  };
-  const pullMarketData = async (items: ItemInputLineData[]) => {
-    const finishedResults = [...results];
-    const taxRatesResponse = await fetch(`/uapi/tax-rates?world=${world}`);
-    const taxRatesData = await taxRatesResponse.json();
-    let taxRatesLowestCities = [];
-    let taxRatesLowestNumber = 100;
-    for (const city in taxRatesData) {
-      if (taxRatesData[city] < taxRatesLowestNumber) {
-        taxRatesLowestCities = [];
-        taxRatesLowestCities.push(city);
-        taxRatesLowestNumber = taxRatesData[city];
-      } else if (taxRatesData[city] === taxRatesLowestNumber)
-        taxRatesLowestCities.push(city);
-    }
-    setLowestTaxRate(taxRatesLowestNumber);
-    setLowestTaxRateCities(taxRatesLowestCities);
-    for (let item of items) {
-      try {
-        const trackingItem = itemsToTrack.find(
-          (i) => i.result?.ID === item.result?.ID
-        );
-        if (!!trackingItem && trackingItem.loaded2) continue;
-        const historicalResponse = await fetch(
-          `/uapi/history/${world}/${item.result?.ID}?entriesWithin=2592000`
-        );
-        const currentResponse = await fetch(
-          `/uapi/${world}/${item.result?.ID}`
-        );
-        setItemsToTrack([...itemsToTrack]);
-        const historicalData = await historicalResponse.json();
-        const currentData = await currentResponse.json();
-        if (
-          historicalData.entries.length === 0 &&
-          currentData.entries.length === 0
-        )
-          continue;
-        if (!!trackingItem) trackingItem.loaded2 = true;
-        const lastMonthEntries = historicalData.entries;
-        let averagePricePerUnit = 0;
-        let numItemsSold = 0;
-        const stackSizes = [];
-        const prices = [];
-        for (let entry of lastMonthEntries) {
-          averagePricePerUnit += entry.pricePerUnit * entry.quantity;
-          numItemsSold += entry.quantity;
-          stackSizes.push(entry.quantity);
-          prices.push(entry.pricePerUnit);
-        }
-        averagePricePerUnit /= numItemsSold;
-        item.nqSaleVelocity = Math.floor(historicalData.nqSaleVelocity);
-        item.dailySaleVelocity = Math.floor(item.nqSaleVelocity / 7);
-        item.averagePrice = Math.floor(averagePricePerUnit);
-        item.medianPrice = median(prices);
-        item.medianStackSize = median(stackSizes);
-        item.currentSaleValue = calculatePostTaxSaleValue(
-          currentData.minPriceNQ - 1
-        );
-        item.todaysProfitPotential =
-          item.dailySaleVelocity * item.currentSaleValue;
-        let marketValue = 0;
-        for (let entry of lastMonthEntries)
-          marketValue += entry.pricePerUnit * entry.quantity;
-        item.monthlyMarketValue = marketValue;
-        item.possibleMoneyPerDay = Math.floor(marketValue / 30);
-        item.numberToGatherPerDay = Math.floor(
-          item.possibleMoneyPerDay / item.medianPrice
-        );
-        finishedResults.push(item);
-        setResults([...finishedResults]);
-      } catch (e) {
-        console.error(e);
+  const calculatePostTaxSaleValue = useCallback(
+    (price: number) => {
+      if (!lowestTaxRate) return price;
+      return Math.floor(price * (1 - lowestTaxRate / 100));
+    },
+    [lowestTaxRate]
+  );
+  const pullData = useCallback(
+    async (items: ItemInputLineData[]) => {
+      const finishedResults = [];
+      const taxRatesResponse = await fetch(`/uapi/tax-rates?world=${world}`);
+      const taxRatesData = await taxRatesResponse.json();
+      let taxRatesLowestCities = [];
+      let taxRatesLowestNumber = 100;
+      for (const city in taxRatesData) {
+        if (taxRatesData[city] < taxRatesLowestNumber) {
+          taxRatesLowestCities = [];
+          taxRatesLowestCities.push(city);
+          taxRatesLowestNumber = taxRatesData[city];
+        } else if (taxRatesData[city] === taxRatesLowestNumber)
+          taxRatesLowestCities.push(city);
       }
-    }
-    setResults([...finishedResults]);
-  };
-  const pullData = async () => {
-    pullMarketData(itemsToTrack);
-  };
-  const saveData = () => {
+      setLowestTaxRate(taxRatesLowestNumber);
+      setLowestTaxRateCities(taxRatesLowestCities);
+      for (let item of items) {
+        try {
+          const trackingItem = itemsToTrack.find(
+            (i) => i.result?.ID === item.result?.ID
+          );
+          if (!!trackingItem && trackingItem.loaded2) continue;
+          const historicalResponse = await fetch(
+            `/uapi/history/${world}/${item.result?.ID}?entriesWithin=2592000`
+          );
+          const currentResponse = await fetch(
+            `/uapi/${world}/${item.result?.ID}`
+          );
+          setItemsToTrack([...itemsToTrack]);
+          const historicalData = await historicalResponse.json();
+          const currentData = await currentResponse.json();
+          if (
+            historicalData.entries.length === 0 &&
+            currentData.entries.length === 0
+          )
+            continue;
+          if (!!trackingItem) trackingItem.loaded2 = true;
+          const lastMonthEntries = historicalData.entries;
+          let averagePricePerUnit = 0;
+          let numItemsSold = 0;
+          const stackSizes = [];
+          const prices = [];
+          for (let entry of lastMonthEntries) {
+            averagePricePerUnit += entry.pricePerUnit * entry.quantity;
+            numItemsSold += entry.quantity;
+            stackSizes.push(entry.quantity);
+            prices.push(entry.pricePerUnit);
+          }
+          averagePricePerUnit /= numItemsSold;
+          item.nqSaleVelocity = Math.floor(historicalData.nqSaleVelocity);
+          item.dailySaleVelocity = Math.floor(item.nqSaleVelocity / 7);
+          item.averagePrice = Math.floor(averagePricePerUnit);
+          item.medianPrice = median(prices);
+          item.medianStackSize = median(stackSizes);
+          item.currentSaleValue = calculatePostTaxSaleValue(
+            currentData.minPriceNQ - 1
+          );
+          item.todaysProfitPotential =
+            item.dailySaleVelocity * item.currentSaleValue;
+          let marketValue = 0;
+          for (let entry of lastMonthEntries)
+            marketValue += entry.pricePerUnit * entry.quantity;
+          item.monthlyMarketValue = marketValue;
+          item.possibleMoneyPerDay = Math.floor(marketValue / 30);
+          item.numberToGatherPerDay = Math.floor(
+            item.possibleMoneyPerDay / item.medianPrice
+          );
+          finishedResults.push(item);
+          setResults([...finishedResults]);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setResults([...finishedResults]);
+    },
+    [calculatePostTaxSaleValue, itemsToTrack, world]
+  );
+  const saveData = useCallback(() => {
     const data = [];
     for (let item of itemsToTrack) {
       data.push({
@@ -161,7 +162,28 @@ const Main: FC<MainProps> = () => {
     const jsonData = JSON.stringify(data);
     localStorage.setItem("itemsToTrack", jsonData);
     localStorage.setItem("world", world);
-  };
+  }, [itemsToTrack, world]);
+  useEffect(() => {
+    if (!loaded) {
+      const items = localStorage.getItem("itemsToTrack");
+      pullWorldData();
+      if (!!items) setItemsToTrack(JSON.parse(items));
+      setLoaded(true);
+    }
+  }, [loaded]);
+  useEffect(() => {
+    if (world !== "" && world !== localStorage.getItem("world")) {
+      pullData(itemsToTrack);
+      saveData();
+    }
+  }, [world, pullData, saveData, itemsToTrack]);
+  useEffect(() => {
+    if (!initialApiLoad && itemsToTrack.length > 0 && world !== "") {
+      pullData(itemsToTrack);
+      setInitialApiLoad(true);
+    }
+  }, [initialApiLoad, itemsToTrack, pullData, world]);
+
   const columns: GridColDef[] = [
     {
       field: "text",
@@ -233,7 +255,10 @@ const Main: FC<MainProps> = () => {
               <InputLabel>Select World</InputLabel>
               <Select
                 value={world}
-                onChange={(e) => setWorld(e.target.value)}
+                onChange={(e) => {
+                  setWorld(e.target.value);
+                  resetLoadedState();
+                }}
                 fullWidth
               >
                 <MenuItem key="" value={""}>
@@ -253,16 +278,17 @@ const Main: FC<MainProps> = () => {
                 key={entry.id}
                 item={entry}
                 onClick={() => removeItemToTrack(entry.id)}
+                itemSelectedCallback={() => {
+                  resetLoadedState();
+                  pullData(itemsToTrack);
+                  saveData();
+                }}
               />
             ))}
           </div>
           <Button onClick={addItemToTrack} className={styles.plusButton}>
             <FontAwesomeIcon icon={faPlus} />
           </Button>
-          <div>
-            <Button onClick={pullData}>Pull</Button>
-            <Button onClick={saveData}>Save</Button>
-          </div>
           {!!lowestTaxRate && (
             <div className={styles.taxBox}>
               <div>Lowest Tax Rate: {lowestTaxRate}%</div>
