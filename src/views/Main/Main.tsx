@@ -111,6 +111,14 @@ const Main: FC<MainProps> = () => {
       field: "text",
       headerName: "Name",
       flex: 1,
+      renderCell: (params) => {
+        return (
+          <div className={styles.nameCell}>
+            <img src={`/xivapi/${params.row.result?.Icon}`} alt="Icon" />
+            <div>{params.row.text}</div>
+          </div>
+        );
+      },
     },
     {
       field: "averagePrice",
