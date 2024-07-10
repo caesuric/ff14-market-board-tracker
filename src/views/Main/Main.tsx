@@ -14,6 +14,10 @@ const Main: FC<MainProps> = () => {
   const [loaded, setLoaded] = useState<boolean>(false);
   const [itemsToTrack, setItemsToTrack] = useState<ItemInputLineData[]>([]);
   const [results, setResults] = useState<any[]>([]);
+  const [lowestTaxRate, setLowestTaxRate] = useState<number | undefined>(
+    undefined
+  );
+  const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
   useEffect(() => {
     if (!loaded) {
       const items = localStorage.getItem("itemsToTrack");
@@ -49,22 +53,46 @@ const Main: FC<MainProps> = () => {
     if (values.length % 2) return values[half];
     return (values[half - 1] + values[half]) / 2.0;
   };
+  const calculatePostTaxSaleValue = (price: number) => {
+    if (!lowestTaxRate) return price;
+    return Math.floor(price * (1 - lowestTaxRate / 100));
+  };
   const pullMarketData = async (items: ItemInputLineData[]) => {
     const finishedResults = [...results];
+    const taxRatesResponse = await fetch("/uapi/tax-rates?world=ultros");
+    const taxRatesData = await taxRatesResponse.json();
+    let taxRatesLowestCities = [];
+    let taxRatesLowestNumber = 100;
+    for (const city in taxRatesData) {
+      if (taxRatesData[city] < taxRatesLowestNumber) {
+        taxRatesLowestCities = [];
+        taxRatesLowestCities.push(city);
+        taxRatesLowestNumber = taxRatesData[city];
+      } else if (taxRatesData[city] === taxRatesLowestNumber)
+        taxRatesLowestCities.push(city);
+    }
+    setLowestTaxRate(taxRatesLowestNumber);
+    setLowestTaxRateCities(taxRatesLowestCities);
     for (let item of items) {
       try {
         const trackingItem = itemsToTrack.find(
           (i) => i.result?.ID === item.result?.ID
         );
         if (!!trackingItem && trackingItem.loaded2) continue;
-        const response = await fetch(
+        const historicalResponse = await fetch(
           `/uapi/history/ultros/${item.result?.ID}?entriesWithin=2592000`
         );
+        const currentResponse = await fetch(`/uapi/ultros/${item.result?.ID}`);
         setItemsToTrack([...itemsToTrack]);
-        const data = await response.json();
-        if (data.entries.length === 0) continue;
+        const historicalData = await historicalResponse.json();
+        const currentData = await currentResponse.json();
+        if (
+          historicalData.entries.length === 0 &&
+          currentData.entries.length === 0
+        )
+          continue;
         if (!!trackingItem) trackingItem.loaded2 = true;
-        const lastMonthEntries = data.entries;
+        const lastMonthEntries = historicalData.entries;
         let averagePricePerUnit = 0;
         let numItemsSold = 0;
         const stackSizes = [];
@@ -76,10 +104,16 @@ const Main: FC<MainProps> = () => {
           prices.push(entry.pricePerUnit);
         }
         averagePricePerUnit /= numItemsSold;
-        item.nqSaleVelocity = Math.floor(data.nqSaleVelocity);
+        item.nqSaleVelocity = Math.floor(historicalData.nqSaleVelocity);
+        item.dailySaleVelocity = Math.floor(item.nqSaleVelocity / 7);
         item.averagePrice = Math.floor(averagePricePerUnit);
         item.medianPrice = median(prices);
         item.medianStackSize = median(stackSizes);
+        item.currentSaleValue = calculatePostTaxSaleValue(
+          currentData.minPriceNQ - 1
+        );
+        item.todaysProfitPotential =
+          item.dailySaleVelocity * item.currentSaleValue;
         let marketValue = 0;
         for (let entry of lastMonthEntries)
           marketValue += entry.pricePerUnit * entry.quantity;
@@ -125,8 +159,8 @@ const Main: FC<MainProps> = () => {
       },
     },
     {
-      field: "averagePrice",
-      headerName: "Average Price",
+      field: "currentSaleValue",
+      headerName: "Current Profit Per Item",
       flex: 1,
       valueFormatter: (params) => {
         return params.value.toLocaleString() + " gil";
@@ -142,17 +176,17 @@ const Main: FC<MainProps> = () => {
     },
     {
       field: "medianStackSize",
-      headerName: "Median Stack Size",
+      headerName: "Median Stack Size (Historical)",
       flex: 1,
     },
     {
-      field: "nqSaleVelocity",
-      headerName: "Weekly Sale Velocity",
+      field: "dailySaleVelocity",
+      headerName: "Sales Per Day",
       flex: 1,
     },
     {
-      field: "monthlyMarketValue",
-      headerName: "Monthly Market Value",
+      field: "todaysProfitPotential",
+      headerName: "Potential Profit Today",
       flex: 1,
       valueFormatter: (params) => {
         return params.value.toLocaleString() + " gil";
@@ -160,18 +194,10 @@ const Main: FC<MainProps> = () => {
     },
     {
       field: "possibleMoneyPerDay",
-      headerName: "Possible Money Per Day",
+      headerName: "Daily Profit at Median Price",
       flex: 1,
       valueFormatter: (params) => {
         return params.value.toLocaleString() + " gil";
-      },
-    },
-    {
-      field: "numberToGatherPerDay",
-      headerName: "Number To Gather Per Day",
-      flex: 1,
-      valueFormatter: (params) => {
-        return params.value.toLocaleString();
       },
     },
   ];
@@ -200,6 +226,19 @@ const Main: FC<MainProps> = () => {
             <Button onClick={pullData}>Pull</Button>
             <Button onClick={saveData}>Save</Button>
           </div>
+          {!!lowestTaxRate && (
+            <div className={styles.taxBox}>
+              <div>Lowest Tax Rate: {lowestTaxRate}%</div>
+              <div>
+                Cities with lowest tax rate:{" "}
+                <ul>
+                  {lowestTaxRateCities.map((city) => (
+                    <li key={city}>{city}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
         <div className={styles.grid}>
           <DataGrid

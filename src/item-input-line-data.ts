@@ -8,12 +8,15 @@ interface ItemInputLineData {
   ffxivId?: string;
   result?: XivApiResult;
   nqSaleVelocity?: number;
+  dailySaleVelocity?: number;
   averagePrice?: number;
   medianPrice?: number;
   medianStackSize?: number;
   monthlyMarketValue?: number;
   possibleMoneyPerDay?: number;
   numberToGatherPerDay?: number;
+  currentSaleValue?: number;
+  todaysProfitPotential?: number;
 }
 
 export { ItemInputLineData };
