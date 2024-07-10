@@ -1,7 +1,13 @@
 import React, { FC, useEffect, useState } from "react";
 import * as uuid from "uuid";
 import { DataGrid, GridColDef, GridToolbar } from "@mui/x-data-grid";
-import { Button } from "@mui/material";
+import {
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+} from "@mui/material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { ItemInputLine } from "components/ItemInputLine/ItemInputLine";
@@ -17,16 +23,25 @@ const Main: FC<MainProps> = () => {
   const [lowestTaxRate, setLowestTaxRate] = useState<number | undefined>(
     undefined
   );
+  const [worlds, setWorlds] = useState<string[]>([]);
+  const [world, setWorld] = useState<string>("");
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
   useEffect(() => {
     if (!loaded) {
       const items = localStorage.getItem("itemsToTrack");
-      if (!!items) {
-        setItemsToTrack(JSON.parse(items));
-      }
+      if (!!items) setItemsToTrack(JSON.parse(items));
+      pullWorldData();
       setLoaded(true);
     }
   }, [loaded]);
+
+  const pullWorldData = async () => {
+    const worldDataResponse = await fetch("/uapi/worlds");
+    const worldData = await worldDataResponse.json();
+    setWorlds(worldData.map((world: any) => world.name));
+    const loadedWorld = localStorage.getItem("world");
+    if (!!loadedWorld) setWorld(loadedWorld);
+  };
   const removeItemToTrack = (item: string) => {
     itemsToTrack.splice(
       itemsToTrack.findIndex((i) => i.id === item),
@@ -59,7 +74,7 @@ const Main: FC<MainProps> = () => {
   };
   const pullMarketData = async (items: ItemInputLineData[]) => {
     const finishedResults = [...results];
-    const taxRatesResponse = await fetch("/uapi/tax-rates?world=ultros");
+    const taxRatesResponse = await fetch(`/uapi/tax-rates?world=${world}`);
     const taxRatesData = await taxRatesResponse.json();
     let taxRatesLowestCities = [];
     let taxRatesLowestNumber = 100;
@@ -80,9 +95,11 @@ const Main: FC<MainProps> = () => {
         );
         if (!!trackingItem && trackingItem.loaded2) continue;
         const historicalResponse = await fetch(
-          `/uapi/history/ultros/${item.result?.ID}?entriesWithin=2592000`
+          `/uapi/history/${world}/${item.result?.ID}?entriesWithin=2592000`
         );
-        const currentResponse = await fetch(`/uapi/ultros/${item.result?.ID}`);
+        const currentResponse = await fetch(
+          `/uapi/${world}/${item.result?.ID}`
+        );
         setItemsToTrack([...itemsToTrack]);
         const historicalData = await historicalResponse.json();
         const currentData = await currentResponse.json();
@@ -143,6 +160,7 @@ const Main: FC<MainProps> = () => {
     }
     const jsonData = JSON.stringify(data);
     localStorage.setItem("itemsToTrack", jsonData);
+    localStorage.setItem("world", world);
   };
   const columns: GridColDef[] = [
     {
@@ -210,6 +228,25 @@ const Main: FC<MainProps> = () => {
       </div>
       <div className={styles.mainPanel}>
         <div className={styles.leftSelector}>
+          <div>
+            <FormControl fullWidth>
+              <InputLabel>Select World</InputLabel>
+              <Select
+                value={world}
+                onChange={(e) => setWorld(e.target.value)}
+                fullWidth
+              >
+                <MenuItem key="" value={""}>
+                  None
+                </MenuItem>
+                {worlds.map((world) => (
+                  <MenuItem key={world} value={world}>
+                    {world}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
           <div className={styles.itemsToTrack}>
             {itemsToTrack.map((entry) => (
               <ItemInputLine
