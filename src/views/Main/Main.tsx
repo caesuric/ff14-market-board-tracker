@@ -30,7 +30,7 @@ const Main: FC<MainProps> = () => {
   const pullWorldData = async () => {
     try {
       const worldDataResponse = await fetch("/uapi/worlds");
-      console.log(worldDataResponse);
+      console.log(await worldDataResponse.text());
       const worldData = await worldDataResponse.json();
       setWorlds(worldData.map((world: any) => world.name).sort());
       const loadedWorld = localStorage.getItem("world");
