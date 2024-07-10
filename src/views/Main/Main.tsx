@@ -28,11 +28,15 @@ const Main: FC<MainProps> = () => {
   const [world, setWorld] = useState<string>("");
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
   const pullWorldData = async () => {
-    const worldDataResponse = await fetch("/uapi/worlds");
-    const worldData = await worldDataResponse.json();
-    setWorlds(worldData.map((world: any) => world.name).sort());
-    const loadedWorld = localStorage.getItem("world");
-    if (!!loadedWorld) setWorld(loadedWorld);
+    try {
+      const worldDataResponse = await fetch("/uapi/worlds");
+      const worldData = await worldDataResponse.json();
+      setWorlds(worldData.map((world: any) => world.name).sort());
+      const loadedWorld = localStorage.getItem("world");
+      if (!!loadedWorld) setWorld(loadedWorld);
+    } catch (e) {
+      console.error(e);
+    }
   };
   const removeItemToTrack = (item: string) => {
     itemsToTrack.splice(
