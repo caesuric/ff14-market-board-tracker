@@ -1,4 +1,4 @@
-import React, { FC, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 import * as uuid from "uuid";
 import { DataGrid, GridColDef, GridToolbar } from "@mui/x-data-grid";
 import { Button } from "@mui/material";
@@ -11,14 +11,18 @@ import styles from "./Main.module.scss";
 interface MainProps {}
 
 const Main: FC<MainProps> = () => {
+  const [loaded, setLoaded] = useState<boolean>(false);
   const [itemsToTrack, setItemsToTrack] = useState<ItemInputLineData[]>([]);
   const [results, setResults] = useState<any[]>([]);
-  if (itemsToTrack.length === 0) {
-    const items = localStorage.getItem("itemsToTrack");
-    if (!!items) {
-      setItemsToTrack(JSON.parse(items));
+  useEffect(() => {
+    if (!loaded) {
+      const items = localStorage.getItem("itemsToTrack");
+      if (!!items) {
+        setItemsToTrack(JSON.parse(items));
+      }
+      setLoaded(true);
     }
-  }
+  }, [loaded]);
   const removeItemToTrack = (item: string) => {
     itemsToTrack.splice(
       itemsToTrack.findIndex((i) => i.id === item),
