@@ -29,7 +29,9 @@ const Main: FC<MainProps> = () => {
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
   const pullWorldData = async () => {
     try {
-      const worldDataResponse = await fetch("/uapi/worlds");
+      const worldDataResponse = await fetch(
+        "https://universalis.app/api/v2/worlds"
+      );
       const worldData = await worldDataResponse.json();
       setWorlds(worldData.map((world: any) => world.name).sort());
       const loadedWorld = localStorage.getItem("world");
@@ -80,7 +82,9 @@ const Main: FC<MainProps> = () => {
   const pullData = useCallback(
     async (items: ItemInputLineData[]) => {
       const finishedResults = [];
-      const taxRatesResponse = await fetch(`/uapi/tax-rates?world=${world}`);
+      const taxRatesResponse = await fetch(
+        `https://universalis.app/api/v2/tax-rates?world=${world}`
+      );
       const taxRatesData = await taxRatesResponse.json();
       let taxRatesLowestCities = [];
       let taxRatesLowestNumber = 100;
@@ -101,10 +105,10 @@ const Main: FC<MainProps> = () => {
           );
           if (!!trackingItem && trackingItem.loaded2) continue;
           const historicalResponse = await fetch(
-            `/uapi/history/${world}/${item.result?.ID}?entriesWithin=2592000`
+            `https://universalis.app/api/v2/history/${world}/${item.result?.ID}?entriesWithin=2592000`
           );
           const currentResponse = await fetch(
-            `/uapi/${world}/${item.result?.ID}`
+            `https://universalis.app/api/v2/${world}/${item.result?.ID}`
           );
           setItemsToTrack([...itemsToTrack]);
           const historicalData = await historicalResponse.json();
@@ -196,7 +200,10 @@ const Main: FC<MainProps> = () => {
       renderCell: (params) => {
         return (
           <div className={styles.nameCell}>
-            <img src={`/xivapi/${params.row.result?.Icon}`} alt="Icon" />
+            <img
+              src={`https://xivapi.com/${params.row.result?.Icon}`}
+              alt="Icon"
+            />
             <div>{params.row.text}</div>
           </div>
         );

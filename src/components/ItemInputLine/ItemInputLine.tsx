@@ -23,7 +23,7 @@ const ItemInputLine: FC<ItemInputLineProps> = ({
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const getItemsFromBackend = (search: string) => {
     fetch(
-      `/xivapi/search?string=${search}&string_algo=prefix&indexes=Item`
+      `https://xivapi.com/search?string=${search}&string_algo=prefix&indexes=Item`
     ).then(async (response) => {
       const processedResponse: XivApiResult[] = (await response.json())
         .Results as XivApiResult[];
