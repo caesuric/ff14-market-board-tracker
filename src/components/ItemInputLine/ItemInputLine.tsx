@@ -17,7 +17,9 @@ const ItemInputLine: FC<ItemInputLineProps> = ({ item, onClick }) => {
   const [dropdownOptions, setDropdownOptions] = useState<XivApiResult[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const getItemsFromBackend = (search: string) => {
-    fetch(`/xivapi/search?string=${search}`).then(async (response) => {
+    fetch(
+      `/xivapi/search?string=${search}&string_algo=prefix&indexes=Item`
+    ).then(async (response) => {
       const processedResponse: XivApiResult[] = (await response.json())
         .Results as XivApiResult[];
       const options = processedResponse.sort((x) => x._Score).reverse();
