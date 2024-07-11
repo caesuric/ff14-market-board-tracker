@@ -1,6 +1,6 @@
 import React, { FC, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Autocomplete, Button, debounce, TextField } from "@mui/material";
 import { ItemInputLineData } from "item-input-line-data";
 import { XivApiResult } from "xiv-api-result";
@@ -93,18 +93,12 @@ const ItemInputLine: FC<ItemInputLineProps> = ({
           onInputChange={onChange}
           open={isOpen}
           renderInput={(params) => (
-            <TextField {...params} label="Search for an item" />
+            <TextField {...params} label="Search for an item" autoFocus />
           )}
         />
       ) : (
         <div>{item.result.Name}</div>
       )}
-      {item.loaded ? (
-        <FontAwesomeIcon size="lg" icon={faCheck} className={styles.check} />
-      ) : null}
-      {item.loaded2 ? (
-        <FontAwesomeIcon size="lg" icon={faCheck} className={styles.check} />
-      ) : null}
     </div>
   );
 };

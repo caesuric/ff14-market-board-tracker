@@ -98,21 +98,30 @@ const Main: FC<MainProps> = () => {
       }
       setLowestTaxRate(taxRatesLowestNumber);
       setLowestTaxRateCities(taxRatesLowestCities);
+      const ids = items.map((item) => item.result?.ID);
+      if (ids.length === 0) return;
+      const idsCommaSeparated = ids.join(",");
+      const currentResponse = await fetch(
+        `https://universalis.app/api/v2/${world}/${idsCommaSeparated}`
+      );
+      const currentResponseData = await currentResponse.json();
+      const historicalResponse = await fetch(
+        `https://universalis.app/api/v2/history/${world}/${idsCommaSeparated}?entriesWithin=2592000`
+      );
+      const historicalResponseData = await historicalResponse.json();
       for (let item of items) {
         try {
           const trackingItem = itemsToTrack.find(
             (i) => i.result?.ID === item.result?.ID
           );
           if (!!trackingItem && trackingItem.loaded2) continue;
-          const historicalResponse = await fetch(
-            `https://universalis.app/api/v2/history/${world}/${item.result?.ID}?entriesWithin=2592000`
-          );
-          const currentResponse = await fetch(
-            `https://universalis.app/api/v2/${world}/${item.result?.ID}`
-          );
           setItemsToTrack([...itemsToTrack]);
-          const historicalData = await historicalResponse.json();
-          const currentData = await currentResponse.json();
+          const historicalData =
+            historicalResponseData?.items?.[item.result?.ID ?? 0] ??
+            historicalResponseData;
+          const currentData =
+            currentResponseData?.items?.[item.result?.ID ?? 0] ??
+            currentResponseData;
           if (
             historicalData.entries.length === 0 &&
             currentData.entries.length === 0
