@@ -27,6 +27,7 @@ const Main: FC<MainProps> = () => {
   const [worlds, setWorlds] = useState<string[]>([]);
   const [world, setWorld] = useState<string>("");
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const pullWorldData = async () => {
     try {
       const worldDataResponse = await fetch(
@@ -46,8 +47,12 @@ const Main: FC<MainProps> = () => {
       1
     );
     setItemsToTrack([...itemsToTrack]);
-    resetLoadedState();
-    pullData(itemsToTrack);
+    const tempResults = [...results];
+    tempResults.splice(
+      tempResults.findIndex((i) => i.id === item),
+      1
+    );
+    setResults([...tempResults]);
     saveData();
   };
   const resetLoadedState = () => {
@@ -81,6 +86,7 @@ const Main: FC<MainProps> = () => {
   );
   const pullData = useCallback(
     async (items: ItemInputLineData[]) => {
+      setIsLoading(true);
       const finishedResults = [];
       const taxRatesResponse = await fetch(
         `https://universalis.app/api/v2/tax-rates?world=${world}`
@@ -98,7 +104,9 @@ const Main: FC<MainProps> = () => {
       }
       setLowestTaxRate(taxRatesLowestNumber);
       setLowestTaxRateCities(taxRatesLowestCities);
-      const ids = items.map((item) => item.result?.ID);
+      const ids = items
+        .filter((item) => !item.loaded2)
+        .map((item) => item.result?.ID);
       if (ids.length === 0) return;
       const idsCommaSeparated = ids.join(",");
       const currentResponse = await fetch(
@@ -114,7 +122,10 @@ const Main: FC<MainProps> = () => {
           const trackingItem = itemsToTrack.find(
             (i) => i.result?.ID === item.result?.ID
           );
-          if (!!trackingItem && trackingItem.loaded2) continue;
+          if (!!trackingItem && trackingItem.loaded2) {
+            finishedResults.push(item);
+            continue;
+          }
           setItemsToTrack([...itemsToTrack]);
           const historicalData =
             historicalResponseData?.items?.[item.result?.ID ?? 0] ??
@@ -159,12 +170,12 @@ const Main: FC<MainProps> = () => {
             item.possibleMoneyPerDay / item.medianPrice
           );
           finishedResults.push(item);
-          setResults([...finishedResults]);
         } catch (e) {
           console.error(e);
         }
       }
       setResults([...finishedResults]);
+      setIsLoading(false);
     },
     [calculatePostTaxSaleValue, itemsToTrack, world]
   );
@@ -299,7 +310,7 @@ const Main: FC<MainProps> = () => {
                 item={entry}
                 onClick={() => removeItemToTrack(entry.id)}
                 itemSelectedCallback={() => {
-                  resetLoadedState();
+                  entry.loaded2 = false;
                   pullData(itemsToTrack);
                   saveData();
                 }}
@@ -325,6 +336,7 @@ const Main: FC<MainProps> = () => {
         </div>
         <div className={styles.grid}>
           <DataGrid
+            loading={isLoading}
             rows={results}
             columns={columns}
             pageSize={100}
