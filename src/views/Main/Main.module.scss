@@ -29,9 +29,24 @@
       font-weight: bold;
       height: 30px;
       margin: 5px;
+      margin-right: 0;
       padding: 5px;
       box-shadow: 0 0 5px #333333;
+      border-radius: 5px;
       cursor: pointer;
+    }
+
+    .activeLink {
+      text-decoration: none;
+
+      .topButton {
+        background-color: #b2b2ff;
+        color: #333333;
+      }
+    }
+
+    .inactiveLink {
+      text-decoration: none;
     }
   }
 
