@@ -1,12 +1,12 @@
 import React from "react";
 import { shallow } from "enzyme";
-import { Main } from "./Main";
+import { TrackByJob } from "./TrackByJob";
 
-describe("<Main />", () => {
+describe("<TrackByJob />", () => {
   let component;
 
   beforeEach(() => {
-    component = shallow(<Main />);
+    component = shallow(<TrackByJob />);
   });
 
   test("It should mount", () => {

@@ -1,4 +1,4 @@
-.Main {
+.TrackByJob {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -39,5 +39,46 @@
     display: flex;
     height: calc(100vh - 50px);
     align-items: stretch;
+    .leftSelector {
+      flex: 0;
+      padding: 5px;
+
+      .itemsToTrack {
+        display: flex;
+        flex-direction: column;
+        max-height: 100vh;
+        max-width: 350px;
+        min-width: 350px;
+        align-self: flex-start;
+        overflow-y: auto;
+
+        > * {
+          margin-right: 10px;
+        }
+      }
+
+      .plusButton {
+        width: 270px;
+      }
+
+      .taxBox {
+        border: 1px solid #dddddd;
+        padding: 5px;
+        margin: 5px;
+      }
+    }
+    .grid {
+      flex: 2;
+      padding: 5px;
+
+      .nameCell {
+        display: flex;
+        align-items: center;
+
+        img {
+          margin-right: 10px;
+        }
+      }
+    }
   }
 }

@@ -1,12 +1,12 @@
 import React from "react";
 import { shallow } from "enzyme";
-import { Main } from "./Main";
+import { ItemTracker } from "./ItemTracker";
 
-describe("<Main />", () => {
+describe("<ItemTracker />", () => {
   let component;
 
   beforeEach(() => {
-    component = shallow(<Main />);
+    component = shallow(<ItemTracker />);
   });
 
   test("It should mount", () => {
