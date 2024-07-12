@@ -1,6 +1,6 @@
 import React, { FC, useCallback, useEffect, useState } from "react";
 import * as uuid from "uuid";
-import { DataGrid, GridColDef, GridToolbar } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import {
   Button,
   FormControl,
@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { ItemInputLine } from "components/ItemInputLine/ItemInputLine";
 import { ItemInputLineData } from "item-input-line-data";
+import { columns } from "common-data/columns";
 import styles from "./ItemTracker.module.scss";
 
 interface ItemTrackerProps {}
@@ -211,67 +212,6 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
       setInitialApiLoad(true);
     }
   }, [initialApiLoad, itemsToTrack, pullData, world]);
-
-  const columns: GridColDef[] = [
-    {
-      field: "text",
-      headerName: "Name",
-      flex: 1,
-      renderCell: (params) => {
-        return (
-          <div className={styles.nameCell}>
-            <img
-              src={`https://xivapi.com/${params.row.result?.Icon}`}
-              alt="Icon"
-            />
-            <div>{params.row.text}</div>
-          </div>
-        );
-      },
-    },
-    {
-      field: "currentSaleValue",
-      headerName: "Current Profit Per Item",
-      flex: 1,
-      valueFormatter: (params) => {
-        return params.value.toLocaleString() + " gil";
-      },
-    },
-    {
-      field: "medianPrice",
-      headerName: "Median Price",
-      flex: 1,
-      valueFormatter: (params) => {
-        return params.value.toLocaleString() + " gil";
-      },
-    },
-    {
-      field: "medianStackSize",
-      headerName: "Median Stack Size (Historical)",
-      flex: 1,
-    },
-    {
-      field: "dailySaleVelocity",
-      headerName: "Sales Per Day",
-      flex: 1,
-    },
-    {
-      field: "todaysProfitPotential",
-      headerName: "Potential Profit Today",
-      flex: 1,
-      valueFormatter: (params) => {
-        return params.value.toLocaleString() + " gil";
-      },
-    },
-    {
-      field: "possibleMoneyPerDay",
-      headerName: "Daily Profit at Median Price",
-      flex: 1,
-      valueFormatter: (params) => {
-        return params.value.toLocaleString() + " gil";
-      },
-    },
-  ];
 
   return (
     <div className={styles.ItemTracker}>
