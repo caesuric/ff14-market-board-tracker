@@ -6,12 +6,14 @@ export const columns: GridColDef[] = [
   {
     field: "text",
     headerName: "Name",
-    flex: 1,
+    flex: 2,
     renderCell: (params) => {
       return (
         <div className={styles.nameCell}>
           <img
-            src={`https://xivapi.com/${params.row.result?.Icon}`}
+            src={`https://xivapi.com/${
+              params.row.result?.Icon ?? params.row.icon
+            }`}
             alt="Icon"
           />
           <div>{params.row.text}</div>
@@ -37,7 +39,7 @@ export const columns: GridColDef[] = [
   },
   {
     field: "medianStackSize",
-    headerName: "Median Stack Size (Historical)",
+    headerName: "Median Stack Size",
     flex: 1,
   },
   {

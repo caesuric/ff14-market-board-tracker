@@ -6,6 +6,7 @@ interface ItemInputLineData {
   loaded: boolean;
   loaded2: boolean;
   ffxivId?: string;
+  icon?: string;
   result?: XivApiResult;
   nqSaleVelocity?: number;
   dailySaleVelocity?: number;

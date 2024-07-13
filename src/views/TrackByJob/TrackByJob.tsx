@@ -2,15 +2,15 @@ import React, { FC, useCallback, useEffect, useState } from "react";
 import * as uuid from "uuid";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import {
-  Button,
+  Checkbox,
+  debounce,
   FormControl,
+  FormControlLabel,
   InputLabel,
   MenuItem,
   Select,
+  Slider,
 } from "@mui/material";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { ItemInputLine } from "components/ItemInputLine/ItemInputLine";
 import { ItemInputLineData } from "item-input-line-data";
 import { columns } from "common-data/columns";
 import styles from "./TrackByJob.module.scss";
@@ -29,6 +29,15 @@ const TrackByJob: FC<TrackByJobProps> = () => {
   const [world, setWorld] = useState<string>("");
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [miningSelected, setMiningSelected] = useState<boolean>(false);
+  const [botanySelected, setBotanySelected] = useState<boolean>(false);
+  const [fishingSelected, setFishingSelected] = useState<boolean>(false);
+  const [craftingSelections, setCraftingSelections] = useState<{
+    [name: string]: boolean;
+  }>({});
+  const [craftingTypes, setCraftingTypes] = useState<string[]>([]);
+  const [levelSliderMin, setLevelSliderMin] = useState<number>(90);
+  const [levelSliderMax, setLevelSliderMax] = useState<number>(100);
   const pullWorldData = async () => {
     try {
       const worldDataResponse = await fetch(
@@ -42,32 +51,19 @@ const TrackByJob: FC<TrackByJobProps> = () => {
       console.error(e);
     }
   };
-  const removeItemToTrack = (item: string) => {
-    itemsToTrack.splice(
-      itemsToTrack.findIndex((i) => i.id === item),
-      1
-    );
-    setItemsToTrack([...itemsToTrack]);
-    const tempResults = [...results];
-    tempResults.splice(
-      tempResults.findIndex((i) => i.id === item),
-      1
-    );
-    setResults([...tempResults]);
-    saveData();
+  const pullCraftingTypes = async () => {
+    try {
+      const craftingTypesResponse = await fetch(
+        "http://xivmarketstats.com:1414/rest/crafting-types/"
+      );
+      const craftingTypesData = await craftingTypesResponse.json();
+      setCraftingTypes(craftingTypesData);
+    } catch (e) {
+      console.error(e);
+    }
   };
   const resetLoadedState = () => {
     for (const item of itemsToTrack) item.loaded2 = false;
-  };
-  const addItemToTrack = () => {
-    const itemUuid = uuid.v4();
-    itemsToTrack.push({
-      text: "",
-      id: itemUuid,
-      loaded: false,
-      loaded2: false,
-    });
-    setItemsToTrack([...itemsToTrack]);
   };
   const median = (values: number[]) => {
     if (values.length === 0) throw new Error("No inputs");
@@ -87,6 +83,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
   );
   const pullData = useCallback(
     async (items: ItemInputLineData[]) => {
+      if (world === "") return;
       setIsLoading(true);
       const finishedResults = [];
       const taxRatesResponse = await fetch(
@@ -107,8 +104,12 @@ const TrackByJob: FC<TrackByJobProps> = () => {
       setLowestTaxRateCities(taxRatesLowestCities);
       const ids = items
         .filter((item) => !item.loaded2)
-        .map((item) => item.result?.ID);
-      if (ids.length === 0) return;
+        .map((item) => item.ffxivId);
+      if (ids.length === 0) {
+        setIsLoading(false);
+        setResults([]);
+        return;
+      }
       const idsCommaSeparated = ids.join(",");
       const currentResponse = await fetch(
         `https://universalis.app/api/v2/${world}/${idsCommaSeparated}`
@@ -121,24 +122,31 @@ const TrackByJob: FC<TrackByJobProps> = () => {
       for (let item of items) {
         try {
           const trackingItem = itemsToTrack.find(
-            (i) => i.result?.ID === item.result?.ID
+            (i) => i.result?.ID === item.ffxivId
           );
           if (!!trackingItem && trackingItem.loaded2) {
             finishedResults.push(item);
             continue;
           }
+          const xivApiResponse = await fetch(
+            `https://beta.xivapi.com/api/1/sheet/Item/${item.ffxivId}?Fields=Name,Icon.path`
+          );
+          if (xivApiResponse.status === 404) continue;
+          const xivApiData = await xivApiResponse.json();
+          item.text = xivApiData.fields.Name;
+          item.icon =
+            xivApiData.fields.Icon.path
+              .replace("ui/icon/", "i/")
+              .replace(".tex", "") + ".png";
           setItemsToTrack([...itemsToTrack]);
           const historicalData =
-            historicalResponseData?.items?.[item.result?.ID ?? 0] ??
+            historicalResponseData?.items?.[item.ffxivId ?? 0] ??
             historicalResponseData;
           const currentData =
-            currentResponseData?.items?.[item.result?.ID ?? 0] ??
+            currentResponseData?.items?.[item.ffxivId ?? 0] ??
             currentResponseData;
-          if (
-            historicalData.entries.length === 0 &&
-            currentData.entries.length === 0
-          )
-            continue;
+          if (historicalData?.entries === undefined) continue;
+          if (historicalData.entries.length === 0) continue;
           if (!!trackingItem) trackingItem.loaded2 = true;
           const lastMonthEntries = historicalData.entries;
           let averagePricePerUnit = 0;
@@ -181,37 +189,159 @@ const TrackByJob: FC<TrackByJobProps> = () => {
     [calculatePostTaxSaleValue, itemsToTrack, world]
   );
   const saveData = useCallback(() => {
-    const data = [];
-    for (let item of itemsToTrack) {
-      data.push({
-        ...item,
+    const data = {
+      miningSelected,
+      botanySelected,
+      fishingSelected,
+      craftingSelections,
+      levelSliderMin,
+      levelSliderMax,
+    };
+    const jsonData = JSON.stringify(data);
+    localStorage.setItem("trackByJob", jsonData);
+    localStorage.setItem("world", world);
+  }, [
+    miningSelected,
+    botanySelected,
+    fishingSelected,
+    craftingSelections,
+    levelSliderMin,
+    levelSliderMax,
+    world,
+  ]);
+  const removeItemToTrack = useCallback(
+    (item: string) => {
+      itemsToTrack.splice(
+        itemsToTrack.findIndex((i) => i.id === item),
+        1
+      );
+      setItemsToTrack([...itemsToTrack]);
+      const tempResults = [...results];
+      tempResults.splice(
+        tempResults.findIndex((i) => i.id === item),
+        1
+      );
+      setResults([...tempResults]);
+    },
+    [itemsToTrack, results]
+  );
+  const pullItemsToTrack = useCallback(async () => {
+    const items = [];
+    if (miningSelected) {
+      const miningItems = await fetch(
+        `http://xivmarketstats.com:1414/rest/mining-items/${levelSliderMin}-${levelSliderMax}`
+      );
+      const miningItemsData = await miningItems.json();
+      for (const item of miningItemsData) items.push(item);
+    }
+    if (botanySelected) {
+      const botanyItems = await fetch(
+        `http://xivmarketstats.com:1414/rest/botany-items/${levelSliderMin}-${levelSliderMax}`
+      );
+      const botanyItemsData = await botanyItems.json();
+      for (const item of botanyItemsData) items.push(item);
+    }
+    if (fishingSelected) {
+      const fishingItems = await fetch(
+        `http://xivmarketstats.com:1414/rest/fishing-items/${levelSliderMin}-${levelSliderMax}`
+      );
+      const fishingItemsData = await fishingItems.json();
+      for (const item of fishingItemsData) items.push(item);
+    }
+    for (const craftingType in craftingSelections) {
+      if (!craftingSelections[craftingType]) continue;
+      const craftingItems = await fetch(
+        `http://xivmarketstats.com:1414/rest/crafting-items/${craftingType}/${levelSliderMin}-${levelSliderMax}`
+      );
+      const craftingItemsData = await craftingItems.json();
+      for (const item of craftingItemsData) items.push(item);
+    }
+    const purgeList = [];
+    for (const itemToTrack of itemsToTrack) {
+      if (items.find((i) => i === itemToTrack.result?.ID)) continue;
+      purgeList.push(itemToTrack.id);
+    }
+    for (const itemToPurge of purgeList) removeItemToTrack(itemToPurge);
+    for (const item of items) {
+      if (itemsToTrack.find((i) => i.result?.ID === item)) continue;
+      itemsToTrack.push({
+        text: "",
+        id: uuid.v4(),
+        ffxivId: item,
+        loaded: false,
         loaded2: false,
       });
     }
-    const jsonData = JSON.stringify(data);
-    localStorage.setItem("itemsToTrack", jsonData);
-    localStorage.setItem("world", world);
-  }, [itemsToTrack, world]);
+    setItemsToTrack([...itemsToTrack]);
+  }, [
+    miningSelected,
+    botanySelected,
+    fishingSelected,
+    craftingSelections,
+    levelSliderMin,
+    levelSliderMax,
+    removeItemToTrack,
+    itemsToTrack,
+  ]);
   useEffect(() => {
     if (!loaded) {
-      const items = localStorage.getItem("itemsToTrack");
-      pullWorldData();
-      if (!!items) setItemsToTrack(JSON.parse(items));
+      const savedData = localStorage.getItem("trackByJob");
+      if (!!savedData) {
+        const data = JSON.parse(savedData);
+        setMiningSelected(data.miningSelected);
+        setBotanySelected(data.botanySelected);
+        setFishingSelected(data.fishingSelected);
+        setCraftingSelections(data.craftingSelections);
+        setLevelSliderMin(data.levelSliderMin);
+        setLevelSliderMax(data.levelSliderMax);
+      }
       setLoaded(true);
+      pullWorldData();
+      pullCraftingTypes();
     }
-  }, [loaded]);
+  }, [loaded, pullItemsToTrack, itemsToTrack, pullData]);
+  useEffect(() => {
+    if (!initialApiLoad && world !== "" && loaded) {
+      setInitialApiLoad(true);
+      pullItemsToTrack().then(() => {
+        pullData(itemsToTrack);
+      });
+    }
+  }, [
+    initialApiLoad,
+    world,
+    setInitialApiLoad,
+    itemsToTrack,
+    pullData,
+    pullItemsToTrack,
+    loaded,
+  ]);
   useEffect(() => {
     if (world !== "" && world !== localStorage.getItem("world")) {
-      pullData(itemsToTrack);
       saveData();
+      pullItemsToTrack().then(() => {
+        pullData(itemsToTrack);
+      });
     }
-  }, [world, pullData, saveData, itemsToTrack]);
+  }, [world, pullData, pullItemsToTrack, saveData, itemsToTrack]);
   useEffect(() => {
-    if (!initialApiLoad && itemsToTrack.length > 0 && world !== "") {
-      pullData(itemsToTrack);
-      setInitialApiLoad(true);
+    if (loaded && initialApiLoad && world !== "" && !isLoading) {
+      debounce(() => {
+        saveData();
+        pullItemsToTrack().then(() => {
+          pullData(itemsToTrack);
+        });
+      }, 400);
     }
-  }, [initialApiLoad, itemsToTrack, pullData, world]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    miningSelected,
+    botanySelected,
+    fishingSelected,
+    craftingSelections,
+    levelSliderMin,
+    levelSliderMax,
+  ]);
 
   return (
     <div className={styles.TrackByJob}>
@@ -240,22 +370,82 @@ const TrackByJob: FC<TrackByJobProps> = () => {
             </FormControl>
           </div>
           <div className={styles.itemsToTrack}>
-            {itemsToTrack.map((entry) => (
-              <ItemInputLine
-                key={entry.id}
-                item={entry}
-                onClick={() => removeItemToTrack(entry.id)}
-                itemSelectedCallback={() => {
-                  entry.loaded2 = false;
-                  pullData(itemsToTrack);
-                  saveData();
-                }}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={miningSelected}
+                  onChange={(e, newValue) => setMiningSelected(newValue)}
+                />
+              }
+              label="Mining"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  value={botanySelected}
+                  checked={botanySelected}
+                  onChange={(e, newValue) => setBotanySelected(newValue)}
+                />
+              }
+              label="Botany"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  value={fishingSelected}
+                  checked={fishingSelected}
+                  onChange={(e, newValue) => setFishingSelected(newValue)}
+                />
+              }
+              label="Fishing"
+            />
+            {craftingTypes.map((entry) => (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    value={craftingSelections[entry] ?? false}
+                    checked={craftingSelections[entry] ?? false}
+                    onChange={(e, newValue) => {
+                      craftingSelections[entry] = newValue;
+                      setCraftingSelections({ ...craftingSelections });
+                    }}
+                  />
+                }
+                label={entry}
+                key={entry}
               />
             ))}
+            <FormControlLabel
+              control={
+                <Slider
+                  value={[levelSliderMin, levelSliderMax]}
+                  onChange={(e, newValue) => {
+                    if (typeof newValue === "number") return;
+                    setLevelSliderMin(newValue[0]);
+                    setLevelSliderMax(newValue[1]);
+                  }}
+                  valueLabelDisplay="auto"
+                  min={1}
+                  max={100}
+                  marks={[
+                    { value: 1, label: "1" },
+                    { value: 10, label: "10" },
+                    { value: 20, label: "20" },
+                    { value: 30, label: "30" },
+                    { value: 40, label: "40" },
+                    { value: 50, label: "50" },
+                    { value: 60, label: "60" },
+                    { value: 70, label: "70" },
+                    { value: 80, label: "80" },
+                    { value: 90, label: "90" },
+                    { value: 100, label: "100" },
+                  ]}
+                />
+              }
+              label="Level Range"
+              labelPlacement="top"
+            />
           </div>
-          <Button onClick={addItemToTrack} className={styles.plusButton}>
-            <FontAwesomeIcon icon={faPlus} />
-          </Button>
           {!!lowestTaxRate && (
             <div className={styles.taxBox}>
               <div>Lowest Tax Rate: {lowestTaxRate}%</div>

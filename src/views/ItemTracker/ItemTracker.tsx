@@ -108,7 +108,10 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
       const ids = items
         .filter((item) => !item.loaded2)
         .map((item) => item.result?.ID);
-      if (ids.length === 0) return;
+      if (ids.length === 0) {
+        setIsLoading(false);
+        return;
+      }
       const idsCommaSeparated = ids.join(",");
       const currentResponse = await fetch(
         `https://universalis.app/api/v2/${world}/${idsCommaSeparated}`
