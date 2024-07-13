@@ -54,7 +54,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
   const pullCraftingTypes = async () => {
     try {
       const craftingTypesResponse = await fetch(
-        "http://xivmarketstats.com:1414/rest/crafting-types/"
+        "https://xivmarketstats.com:1414/rest/crafting-types/"
       );
       const craftingTypesData = await craftingTypesResponse.json();
       setCraftingTypes(craftingTypesData);
@@ -229,21 +229,21 @@ const TrackByJob: FC<TrackByJobProps> = () => {
     const items = [];
     if (miningSelected) {
       const miningItems = await fetch(
-        `http://xivmarketstats.com:1414/rest/mining-items/${levelSliderMin}-${levelSliderMax}`
+        `https://xivmarketstats.com:1414/rest/mining-items/${levelSliderMin}-${levelSliderMax}`
       );
       const miningItemsData = await miningItems.json();
       for (const item of miningItemsData) items.push(item);
     }
     if (botanySelected) {
       const botanyItems = await fetch(
-        `http://xivmarketstats.com:1414/rest/botany-items/${levelSliderMin}-${levelSliderMax}`
+        `https://xivmarketstats.com:1414/rest/botany-items/${levelSliderMin}-${levelSliderMax}`
       );
       const botanyItemsData = await botanyItems.json();
       for (const item of botanyItemsData) items.push(item);
     }
     if (fishingSelected) {
       const fishingItems = await fetch(
-        `http://xivmarketstats.com:1414/rest/fishing-items/${levelSliderMin}-${levelSliderMax}`
+        `https://xivmarketstats.com:1414/rest/fishing-items/${levelSliderMin}-${levelSliderMax}`
       );
       const fishingItemsData = await fishingItems.json();
       for (const item of fishingItemsData) items.push(item);
@@ -251,7 +251,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
     for (const craftingType in craftingSelections) {
       if (!craftingSelections[craftingType]) continue;
       const craftingItems = await fetch(
-        `http://xivmarketstats.com:1414/rest/crafting-items/${craftingType}/${levelSliderMin}-${levelSliderMax}`
+        `https://xivmarketstats.com:1414/rest/crafting-items/${craftingType}/${levelSliderMin}-${levelSliderMax}`
       );
       const craftingItemsData = await craftingItems.json();
       for (const item of craftingItemsData) items.push(item);
