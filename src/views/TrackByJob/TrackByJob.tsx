@@ -3,7 +3,6 @@ import * as uuid from "uuid";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import {
   Checkbox,
-  debounce,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -326,12 +325,10 @@ const TrackByJob: FC<TrackByJobProps> = () => {
   }, [world, pullData, pullItemsToTrack, saveData, itemsToTrack]);
   useEffect(() => {
     if (loaded && initialApiLoad && world !== "" && !isLoading) {
-      debounce(() => {
-        saveData();
-        pullItemsToTrack().then(() => {
-          pullData(itemsToTrack);
-        });
-      }, 400);
+      saveData();
+      pullItemsToTrack().then(() => {
+        pullData(itemsToTrack);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
