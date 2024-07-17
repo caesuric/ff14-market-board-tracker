@@ -14,6 +14,18 @@ import { ItemInputLine } from "components/ItemInputLine/ItemInputLine";
 import { ItemInputLineData } from "item-input-line-data";
 import { columns } from "common-data/columns";
 import styles from "./ItemTracker.module.scss";
+import {
+  checkCurrentMarketDataJob,
+  getCurrentMarketData,
+  getHistoricalMarketData,
+  getTaxRates,
+  getWorlds,
+  startGetCurrentMarketData,
+  startGetHistoricalMarketData,
+} from "network-calls";
+import { median } from "calculations";
+import { formatDuration } from "date-fns";
+import { CustomLoadingOverlay } from "components/CustomLoadingOverlay/CustomLoadingOverlay";
 
 interface ItemTrackerProps {}
 
@@ -29,13 +41,18 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
   const [world, setWorld] = useState<string>("");
   const [lowestTaxRateCities, setLowestTaxRateCities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [currentResponseData, setCurrentResponseData] = useState<
+    any | undefined
+  >(undefined);
+  const [historicalResponseData, setHistoricalResponseData] = useState<
+    any | undefined
+  >(undefined);
+  const [loadingPercentage, setLoadingPercentage] = useState<number>(0);
+  const [loadingMessage, setLoadingMessage] = useState<string>("");
   const pullWorldData = async () => {
     try {
-      const worldDataResponse = await fetch(
-        "https://universalis.app/api/v2/worlds"
-      );
-      const worldData = await worldDataResponse.json();
-      setWorlds(worldData.map((world: any) => world.name).sort());
+      const worldData = await getWorlds();
+      setWorlds(worldData.sort());
       const loadedWorld = localStorage.getItem("world");
       if (!!loadedWorld) setWorld(loadedWorld);
     } catch (e) {
@@ -69,15 +86,6 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
     });
     setItemsToTrack([...itemsToTrack]);
   };
-  const median = (values: number[]) => {
-    if (values.length === 0) throw new Error("No inputs");
-    values.sort(function (a, b) {
-      return a - b;
-    });
-    let half = Math.floor(values.length / 2);
-    if (values.length % 2) return values[half];
-    return (values[half - 1] + values[half]) / 2.0;
-  };
   const calculatePostTaxSaleValue = useCallback(
     (price: number) => {
       if (!lowestTaxRate) return price;
@@ -87,12 +95,9 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
   );
   const pullData = useCallback(
     async (items: ItemInputLineData[]) => {
+      if (world === "") return;
       setIsLoading(true);
-      const finishedResults = [];
-      const taxRatesResponse = await fetch(
-        `https://universalis.app/api/v2/tax-rates?world=${world}`
-      );
-      const taxRatesData = await taxRatesResponse.json();
+      const taxRatesData = await getTaxRates(world);
       let taxRatesLowestCities = [];
       let taxRatesLowestNumber = 100;
       for (const city in taxRatesData) {
@@ -112,76 +117,56 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
         setIsLoading(false);
         return;
       }
-      const idsCommaSeparated = ids.join(",");
-      const currentResponse = await fetch(
-        `https://universalis.app/api/v2/${world}/${idsCommaSeparated}`
+      const currentDataJobUuid = await startGetCurrentMarketData(world, ids);
+      const historicalDataJobUuid = await startGetHistoricalMarketData(
+        world,
+        ids
       );
-      const currentResponseData = await currentResponse.json();
-      const historicalResponse = await fetch(
-        `https://universalis.app/api/v2/history/${world}/${idsCommaSeparated}?entriesWithin=2592000`
-      );
-      const historicalResponseData = await historicalResponse.json();
-      for (let item of items) {
-        try {
-          const trackingItem = itemsToTrack.find(
-            (i) => i.result?.ID === item.result?.ID
+      const checkStatus = setInterval(async () => {
+        const currentJobStatus = await checkCurrentMarketDataJob(
+          currentDataJobUuid
+        );
+        const historicalJobStatus = await checkCurrentMarketDataJob(
+          historicalDataJobUuid
+        );
+        if (currentJobStatus.complete && historicalJobStatus.complete) {
+          clearInterval(checkStatus);
+          setLoadingPercentage(99.9);
+          setLoadingMessage("Almost done...");
+          const currentData = await getCurrentMarketData(currentDataJobUuid);
+          const historicalData = await getHistoricalMarketData(
+            historicalDataJobUuid
           );
-          if (!!trackingItem && trackingItem.loaded2) {
-            finishedResults.push(item);
-            continue;
-          }
-          setItemsToTrack([...itemsToTrack]);
-          const historicalData =
-            historicalResponseData?.items?.[item.result?.ID ?? 0] ??
-            historicalResponseData;
-          const currentData =
-            currentResponseData?.items?.[item.result?.ID ?? 0] ??
-            currentResponseData;
-          if (
-            historicalData.entries.length === 0 &&
-            currentData.entries.length === 0
-          )
-            continue;
-          if (!!trackingItem) trackingItem.loaded2 = true;
-          const lastMonthEntries = historicalData.entries;
-          let averagePricePerUnit = 0;
-          let numItemsSold = 0;
-          const stackSizes = [];
-          const prices = [];
-          for (let entry of lastMonthEntries) {
-            averagePricePerUnit += entry.pricePerUnit * entry.quantity;
-            numItemsSold += entry.quantity;
-            stackSizes.push(entry.quantity);
-            prices.push(entry.pricePerUnit);
-          }
-          averagePricePerUnit /= numItemsSold;
-          item.nqSaleVelocity = Math.floor(historicalData.nqSaleVelocity);
-          item.dailySaleVelocity = Math.floor(item.nqSaleVelocity / 7);
-          item.averagePrice = Math.floor(averagePricePerUnit);
-          item.medianPrice = median(prices);
-          item.medianStackSize = median(stackSizes);
-          item.currentSaleValue = calculatePostTaxSaleValue(
-            currentData.minPriceNQ - 1
+          setCurrentResponseData(currentData);
+          setHistoricalResponseData(historicalData);
+        } else {
+          const currentJobPercentage = Math.min(
+            currentJobStatus.operation_time_so_far /
+              currentJobStatus.estimated_operation_time,
+            1
           );
-          item.todaysProfitPotential =
-            item.dailySaleVelocity * item.currentSaleValue;
-          let marketValue = 0;
-          for (let entry of lastMonthEntries)
-            marketValue += entry.pricePerUnit * entry.quantity;
-          item.monthlyMarketValue = marketValue;
-          item.possibleMoneyPerDay = Math.floor(marketValue / 30);
-          item.numberToGatherPerDay = Math.floor(
-            item.possibleMoneyPerDay / item.medianPrice
+          const historicalJobPercentage = Math.min(
+            historicalJobStatus.operation_time_so_far /
+              historicalJobStatus.estimated_operation_time,
+            1
           );
-          finishedResults.push(item);
-        } catch (e) {
-          console.error(e);
+          const finalPercentage =
+            Math.min(currentJobPercentage, historicalJobPercentage) * 100;
+          const highestDurationInSeconds = Math.max(
+            currentJobStatus.estimated_operation_time -
+              currentJobStatus.operation_time_so_far,
+            historicalJobStatus.estimated_operation_time -
+              historicalJobStatus.operation_time_so_far
+          );
+          const duration = formatDuration({
+            seconds: highestDurationInSeconds,
+          });
+          setLoadingPercentage(finalPercentage);
+          setLoadingMessage(`Time Remaining: ${duration}`);
         }
-      }
-      setResults([...finishedResults]);
-      setIsLoading(false);
+      }, 1000);
     },
-    [calculatePostTaxSaleValue, itemsToTrack, world]
+    [world]
   );
   const saveData = useCallback(() => {
     const data = [];
@@ -215,6 +200,74 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
       setInitialApiLoad(true);
     }
   }, [initialApiLoad, itemsToTrack, pullData, world]);
+  useEffect(() => {
+    if (!historicalResponseData || !currentResponseData) return;
+    const finishedResults = [];
+    for (let item of itemsToTrack) {
+      try {
+        const trackingItem = itemsToTrack.find(
+          (i) => i.result?.ID === item.result?.ID
+        );
+        if (!!trackingItem && trackingItem.loaded2) {
+          finishedResults.push(item);
+          continue;
+        }
+        setItemsToTrack([...itemsToTrack]);
+        const historicalData =
+          historicalResponseData?.items?.[item.result?.ID ?? 0] ??
+          historicalResponseData;
+        const currentData =
+          currentResponseData?.items?.[item.result?.ID ?? 0] ??
+          currentResponseData;
+        if (
+          historicalData.entries.length === 0 &&
+          currentData.entries.length === 0
+        )
+          continue;
+        if (!!trackingItem) trackingItem.loaded2 = true;
+        const lastMonthEntries = historicalData.entries;
+        let averagePricePerUnit = 0;
+        let numItemsSold = 0;
+        const stackSizes = [];
+        const prices = [];
+        for (let entry of lastMonthEntries) {
+          averagePricePerUnit += entry.pricePerUnit * entry.quantity;
+          numItemsSold += entry.quantity;
+          stackSizes.push(entry.quantity);
+          prices.push(entry.pricePerUnit);
+        }
+        averagePricePerUnit /= numItemsSold;
+        item.nqSaleVelocity = Math.floor(historicalData.nqSaleVelocity);
+        item.dailySaleVelocity = Math.floor(item.nqSaleVelocity / 7);
+        item.averagePrice = Math.floor(averagePricePerUnit);
+        item.medianPrice = median(prices);
+        item.medianStackSize = median(stackSizes);
+        item.currentSaleValue = calculatePostTaxSaleValue(
+          currentData.minPriceNQ - 1
+        );
+        item.todaysProfitPotential =
+          item.dailySaleVelocity * item.currentSaleValue;
+        let marketValue = 0;
+        for (let entry of lastMonthEntries)
+          marketValue += entry.pricePerUnit * entry.quantity;
+        item.monthlyMarketValue = marketValue;
+        item.possibleMoneyPerDay = Math.floor(marketValue / 30);
+        item.numberToGatherPerDay = Math.floor(
+          item.possibleMoneyPerDay / item.medianPrice
+        );
+        finishedResults.push(item);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setResults([...finishedResults]);
+    setIsLoading(false);
+  }, [
+    historicalResponseData,
+    currentResponseData,
+    itemsToTrack,
+    calculatePostTaxSaleValue,
+  ]);
 
   return (
     <div className={styles.ItemTracker}>
@@ -278,8 +331,13 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
             loading={isLoading}
             rows={results}
             columns={columns}
-            pageSize={100}
-            components={{ Toolbar: GridToolbar }}
+            slots={{
+              loadingOverlay: CustomLoadingOverlay({
+                loadingPercentage,
+                loadingMessage,
+              }),
+              toolbar: GridToolbar,
+            }}
           />
         </div>
       </div>
