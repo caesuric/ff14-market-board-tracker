@@ -23,7 +23,6 @@ import {
   startGetCurrentMarketData,
   startGetHistoricalMarketData,
 } from "network-calls";
-import { median } from "calculations";
 import { formatDuration } from "date-fns";
 import { CustomLoadingOverlay } from "components/CustomLoadingOverlay/CustomLoadingOverlay";
 
@@ -213,47 +212,25 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
           continue;
         }
         setItemsToTrack([...itemsToTrack]);
-        const historicalData =
-          historicalResponseData?.items?.[item.result?.ID ?? 0] ??
-          historicalResponseData;
-        const currentData =
-          currentResponseData?.items?.[item.result?.ID ?? 0] ??
-          currentResponseData;
+        const historicalData = historicalResponseData?.[item.result?.ID ?? 0];
+        const currentData = currentResponseData?.[item.result?.ID ?? 0];
         if (
           historicalData.entries.length === 0 &&
           currentData.entries.length === 0
         )
           continue;
         if (!!trackingItem) trackingItem.loaded2 = true;
-        const lastMonthEntries = historicalData.entries;
-        let averagePricePerUnit = 0;
-        let numItemsSold = 0;
-        const stackSizes = [];
-        const prices = [];
-        for (let entry of lastMonthEntries) {
-          averagePricePerUnit += entry.pricePerUnit * entry.quantity;
-          numItemsSold += entry.quantity;
-          stackSizes.push(entry.quantity);
-          prices.push(entry.pricePerUnit);
-        }
-        averagePricePerUnit /= numItemsSold;
-        item.nqSaleVelocity = Math.floor(historicalData.nqSaleVelocity);
-        item.dailySaleVelocity = Math.floor(item.nqSaleVelocity / 7);
-        item.averagePrice = Math.floor(averagePricePerUnit);
-        item.medianPrice = median(prices);
-        item.medianStackSize = median(stackSizes);
+        item.dailySaleVelocity = historicalData.nq_daily_sale_velocity;
+        item.averagePrice = historicalData.average_price_per_unit;
+        item.medianPrice = historicalData.median_price;
+        item.medianStackSize = historicalData.median_stack_size;
         item.currentSaleValue = calculatePostTaxSaleValue(
-          currentData.minPriceNQ - 1
+          currentData.current_min_price_nq - 1
         );
         item.todaysProfitPotential =
-          item.dailySaleVelocity * item.currentSaleValue;
-        let marketValue = 0;
-        for (let entry of lastMonthEntries)
-          marketValue += entry.pricePerUnit * entry.quantity;
-        item.monthlyMarketValue = marketValue;
-        item.possibleMoneyPerDay = Math.floor(marketValue / 30);
-        item.numberToGatherPerDay = Math.floor(
-          item.possibleMoneyPerDay / item.medianPrice
+          historicalData.nq_daily_sale_velocity * item.currentSaleValue;
+        item.possibleMoneyPerDay = Math.floor(
+          (historicalData.median_price * historicalData.num_items_sold) / 30
         );
         finishedResults.push(item);
       } catch (e) {

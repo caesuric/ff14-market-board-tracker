@@ -25,16 +25,16 @@ export const columns: GridColDef[] = [
     field: "currentSaleValue",
     headerName: "Current Profit Per Item",
     flex: 1,
-    valueFormatter: (params) => {
-      return params.value.toLocaleString() + " gil";
+    valueFormatter: (value: number) => {
+      return value.toLocaleString() + " gil";
     },
   },
   {
     field: "medianPrice",
     headerName: "Median Price",
     flex: 1,
-    valueFormatter: (params) => {
-      return params.value.toLocaleString() + " gil";
+    valueFormatter: (value: number) => {
+      return value.toLocaleString() + " gil";
     },
   },
   {
@@ -51,16 +51,16 @@ export const columns: GridColDef[] = [
     field: "todaysProfitPotential",
     headerName: "Potential Profit Today",
     flex: 1,
-    valueFormatter: (params) => {
-      return params.value.toLocaleString() + " gil";
+    valueFormatter: (value: number) => {
+      return value.toLocaleString() + " gil";
     },
   },
   {
     field: "possibleMoneyPerDay",
     headerName: "Daily Profit at Median Price",
     flex: 1,
-    valueFormatter: (params) => {
-      return params.value.toLocaleString() + " gil";
+    valueFormatter: (value: number) => {
+      return value.toLocaleString() + " gil";
     },
   },
 ];
