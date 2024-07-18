@@ -15,6 +15,7 @@ import { columns } from "common-data/columns";
 import styles from "./TrackByJob.module.scss";
 import {
   checkCurrentMarketDataJob,
+  checkHistoricalMarketDataJob,
   getCurrentMarketData,
   getHistoricalMarketData,
   getTaxRates,
@@ -24,6 +25,7 @@ import {
 } from "network-calls";
 import { formatDistance } from "date-fns";
 import { CustomLoadingOverlay } from "components/CustomLoadingOverlay/CustomLoadingOverlay";
+import { clamp } from "calculations";
 
 interface TrackByJobProps {}
 
@@ -117,59 +119,77 @@ const TrackByJob: FC<TrackByJobProps> = () => {
         world,
         ids
       );
-      const checkStatus = setInterval(async () => {
-        const currentJobStatus = await checkCurrentMarketDataJob(
-          currentDataJobUuid
-        );
-        const historicalJobStatus = await checkCurrentMarketDataJob(
-          historicalDataJobUuid
-        );
-        if (currentJobStatus.complete && historicalJobStatus.complete) {
-          clearInterval(checkStatus);
-          setLoadingPercentage(99.9);
-          setLoadingMessage("Almost done...");
-          const currentData = await getCurrentMarketData(currentDataJobUuid);
-          const historicalData = await getHistoricalMarketData(
-            historicalDataJobUuid
-          );
-          setCurrentResponseData(currentData);
-          setHistoricalResponseData(historicalData);
-        } else {
-          const timeInSeconds = new Date().getTime() / 1000;
-          const timeElapsedCurrent =
-            timeInSeconds - currentJobStatus.last_update;
-          const timeElapsedHistorical =
-            timeInSeconds - historicalJobStatus.last_update;
-          const currentJobPercentage = Math.min(
-            (currentJobStatus.operation_time_so_far + timeElapsedCurrent) /
-              currentJobStatus.estimated_operation_time,
-            1
-          );
-          const historicalJobPercentage = Math.min(
-            (historicalJobStatus.operation_time_so_far +
-              timeElapsedHistorical) /
-              historicalJobStatus.estimated_operation_time,
-            1
-          );
-          const finalPercentage =
-            Math.min(currentJobPercentage, historicalJobPercentage) * 100;
-          const highestDurationInSeconds = Math.max(
-            currentJobStatus.estimated_operation_time -
-              currentJobStatus.operation_time_so_far -
-              timeElapsedCurrent,
-            historicalJobStatus.estimated_operation_time -
-              historicalJobStatus.operation_time_so_far -
-              timeElapsedHistorical
-          );
-          const duration = formatDistance(
-            0,
-            Math.max(Math.floor(highestDurationInSeconds), 0) * 1000,
-            { includeSeconds: true }
-          );
-          setLoadingPercentage(finalPercentage);
-          setLoadingMessage(`Time Remaining: ${duration}`);
-        }
+      if (!currentDataJobUuid || !historicalDataJobUuid) return;
+      const interval = setInterval(() => {
+        Promise.allSettled([
+          checkCurrentMarketDataJob(currentDataJobUuid),
+          checkHistoricalMarketDataJob(historicalDataJobUuid),
+        ]).then(([currentJobStatusResult, historicalJobStatusResult]) => {
+          if (
+            currentJobStatusResult.status === "rejected" ||
+            historicalJobStatusResult.status === "rejected"
+          )
+            return;
+          const currentJobStatus = currentJobStatusResult.value;
+          const historicalJobStatus = historicalJobStatusResult.value;
+          if (!currentJobStatus || !historicalJobStatus)
+            clearInterval(interval);
+          if (currentJobStatus.complete && historicalJobStatus.complete) {
+            clearInterval(interval);
+            setLoadingPercentage(99.9);
+            setLoadingMessage("Almost done...");
+            Promise.allSettled([
+              getCurrentMarketData(currentDataJobUuid),
+              getHistoricalMarketData(historicalDataJobUuid),
+            ]).then(([currentDataResult, historicalDataResult]) => {
+              if (
+                currentDataResult.status === "rejected" ||
+                historicalDataResult.status === "rejected"
+              )
+                return;
+              const currentData = currentDataResult.value;
+              const historicalData = historicalDataResult.value;
+              setCurrentResponseData(currentData);
+              setHistoricalResponseData(historicalData);
+            });
+          } else {
+            const timeInSeconds = new Date().getTime() / 1000;
+            const timeElapsedCurrent =
+              timeInSeconds - currentJobStatus.last_update;
+            const timeElapsedHistorical =
+              timeInSeconds - historicalJobStatus.last_update;
+            const currentJobPercentage = Math.min(
+              (currentJobStatus.operation_time_so_far + timeElapsedCurrent) /
+                currentJobStatus.estimated_operation_time,
+              1
+            );
+            const historicalJobPercentage = Math.min(
+              (historicalJobStatus.operation_time_so_far +
+                timeElapsedHistorical) /
+                historicalJobStatus.estimated_operation_time,
+              1
+            );
+            const finalPercentage =
+              Math.min(currentJobPercentage, historicalJobPercentage) * 100;
+            const highestDurationInSeconds = Math.max(
+              currentJobStatus.estimated_operation_time -
+                currentJobStatus.operation_time_so_far -
+                timeElapsedCurrent,
+              historicalJobStatus.estimated_operation_time -
+                historicalJobStatus.operation_time_so_far -
+                timeElapsedHistorical
+            );
+            const duration = formatDistance(
+              0,
+              Math.max(Math.floor(highestDurationInSeconds), 0) * 1000,
+              { includeSeconds: true }
+            );
+            setLoadingPercentage(clamp(finalPercentage, 0, 99.9));
+            setLoadingMessage(`Estimated Time Remaining: ${duration}`);
+          }
+        });
       }, 1000);
+      return () => clearInterval(interval);
     },
     [world]
   );
@@ -340,26 +360,25 @@ const TrackByJob: FC<TrackByJobProps> = () => {
         setItemsToTrack([...itemsToTrack]);
         const historicalData = historicalResponseData?.[item.result?.ID ?? 0];
         const currentData = currentResponseData?.[item.result?.ID ?? 0];
-        if (
-          historicalData.entries.length === 0 &&
-          currentData.entries.length === 0
-        )
-          continue;
         if (!!trackingItem) trackingItem.loaded2 = true;
-        item.dailySaleVelocity = historicalData.nq_daily_sale_velocity;
-        item.averagePrice = historicalData.average_price_per_unit;
-        item.medianPrice = historicalData.median_price;
-        item.medianStackSize = historicalData.median_stack_size;
+        if (!!historicalData) {
+          item.dailySaleVelocity = historicalData.nq_daily_sale_velocity;
+          item.averagePrice = historicalData.average_price_per_unit;
+          item.medianPrice = historicalData.median_price;
+          item.medianStackSize = historicalData.median_stack_size;
+          item.possibleMoneyPerDay = Math.floor(
+            historicalData.median_price * historicalData.nq_daily_sale_velocity
+          );
+        }
         if (!!currentData) {
           item.currentSaleValue = calculatePostTaxSaleValue(
             currentData.current_min_price_nq - 1
           );
-          item.todaysProfitPotential =
-            historicalData.nq_daily_sale_velocity * item.currentSaleValue;
+          if (!!historicalData) {
+            item.todaysProfitPotential =
+              historicalData.nq_daily_sale_velocity * item.currentSaleValue;
+          }
         }
-        item.possibleMoneyPerDay = Math.floor(
-          (historicalData.median_price * historicalData.num_items_sold) / 30
-        );
         finishedResults.push(item);
       } catch (e) {
         console.error(e);
@@ -477,7 +496,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
               labelPlacement="top"
             />
           </div>
-          {!!lowestTaxRate && (
+          {lowestTaxRate !== undefined && (
             <div className={styles.taxBox}>
               <div>Lowest Tax Rate: {lowestTaxRate}%</div>
               <div>

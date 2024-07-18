@@ -1,63 +1,89 @@
+import { BASE_URL } from "common-data/constants";
+
 export const getWorlds = async () => {
-  const worldDataResponse = await fetch(
-    "https://xivmarketstats.com:1414/rest/worlds"
-  );
-  const worldData = await worldDataResponse.json();
-  return worldData;
+  try {
+    const worldDataResponse = await fetch(`${BASE_URL}/worlds`);
+    const worldData = await worldDataResponse.json();
+    return worldData;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
 };
 
 export const getTaxRates = async (world: string) => {
-  const taxRatesResponse = await fetch(
-    `https://xivmarketstats.com:1414/rest/tax-rates/${world}`
-  );
-  const taxRatesData = await taxRatesResponse.json();
-  return taxRatesData;
+  try {
+    const taxRatesResponse = await fetch(`${BASE_URL}/tax-rates/${world}`);
+    const taxRatesData = await taxRatesResponse.json();
+    return taxRatesData;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
 };
 
 export const startGetCurrentMarketData = async (world: string, ids: any[]) => {
-  let idsCommaSeparated = ids.join(",");
-  if (ids.length < 2) idsCommaSeparated = ids[0].toString();
-  const currentResponse = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-current/start/${world}/${idsCommaSeparated}`
-  );
-  const currentResponseData = await currentResponse.text();
-  return currentResponseData;
+  try {
+    let idsCommaSeparated = ids.join(",");
+    if (ids.length < 2) idsCommaSeparated = ids[0].toString();
+    const currentResponse = await fetch(
+      `${BASE_URL}/market-current/start/${world}/${idsCommaSeparated}`
+    );
+    const currentResponseData = await currentResponse.text();
+    return currentResponseData;
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 export const startGetHistoricalMarketData = async (
   world: string,
   ids: any[]
 ) => {
-  let idsCommaSeparated = ids.join(",");
-  if (ids.length < 2) idsCommaSeparated = ids[0].toString();
-  const historicalResponse = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-current/start/${world}/${idsCommaSeparated}`
-  );
-  const historicalResponseData = await historicalResponse.text();
-  return historicalResponseData;
+  try {
+    let idsCommaSeparated = ids.join(",");
+    if (ids.length < 2) idsCommaSeparated = ids[0].toString();
+    const historicalResponse = await fetch(
+      `${BASE_URL}/market-historical/start/${world}/${idsCommaSeparated}`
+    );
+    const historicalResponseData = await historicalResponse.text();
+    return historicalResponseData;
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 export const checkCurrentMarketDataJob = async (jobUuid: string) => {
-  const response = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-current/status/${jobUuid}`
-  );
-  const responseData = await response.json();
-  return responseData;
+  try {
+    const response = await fetch(
+      `${BASE_URL}/market-current/status/${jobUuid}`
+    );
+    const responseData = await response.json();
+    return responseData;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
 };
 
 export const checkHistoricalMarketDataJob = async (jobUuid: string) => {
-  const response = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-historical/status/${jobUuid}`
-  );
-  const responseData = await response.json();
-  return responseData;
+  try {
+    const response = await fetch(
+      `${BASE_URL}/market-historical/status/${jobUuid}`
+    );
+    const responseData = await response.json();
+    return responseData;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
 };
 
 export const getCurrentMarketData = async (jobUuid: string) => {
-  const response = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-current/result/${jobUuid}`
-  );
   try {
+    const response = await fetch(
+      `${BASE_URL}/market-current/result/${jobUuid}`
+    );
     const responseData = await response.json();
     return responseData;
   } catch (e) {
@@ -67,10 +93,11 @@ export const getCurrentMarketData = async (jobUuid: string) => {
 };
 
 export const getHistoricalMarketData = async (jobUuid: string) => {
-  const response = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-historical/result/${jobUuid}`
-  );
   try {
+    const response = await fetch(
+      `${BASE_URL}/market-historical/result/${jobUuid}`
+    );
+
     const responseData = await response.json();
     return responseData;
   } catch (e) {

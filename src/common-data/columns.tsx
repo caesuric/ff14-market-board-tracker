@@ -26,7 +26,7 @@ export const columns: GridColDef[] = [
     headerName: "Current Profit Per Item",
     flex: 1,
     valueFormatter: (value: number | undefined) => {
-      if (!value) return "API Issues.";
+      if (value === undefined) return "API Issues.";
       return value.toLocaleString() + " gil";
     },
   },
@@ -34,7 +34,8 @@ export const columns: GridColDef[] = [
     field: "medianPrice",
     headerName: "Median Price",
     flex: 1,
-    valueFormatter: (value: number) => {
+    valueFormatter: (value: number | undefined) => {
+      if (value === undefined) return "API Issues.";
       return value.toLocaleString() + " gil";
     },
   },
@@ -53,7 +54,7 @@ export const columns: GridColDef[] = [
     headerName: "Potential Profit Today",
     flex: 1,
     valueFormatter: (value: number | undefined) => {
-      if (!value) return "API Issues.";
+      if (value === undefined) return "API Issues.";
       return value.toLocaleString() + " gil";
     },
   },
@@ -61,7 +62,8 @@ export const columns: GridColDef[] = [
     field: "possibleMoneyPerDay",
     headerName: "Daily Profit at Median Price",
     flex: 1,
-    valueFormatter: (value: number) => {
+    valueFormatter: (value: number | undefined) => {
+      if (value === undefined) return "API Issues.";
       return value.toLocaleString() + " gil";
     },
   },

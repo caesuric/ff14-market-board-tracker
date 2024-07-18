@@ -7,3 +7,7 @@ export const median = (values: number[]) => {
   if (values.length % 2) return values[half];
   return (values[half - 1] + values[half]) / 2.0;
 };
+
+export const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
