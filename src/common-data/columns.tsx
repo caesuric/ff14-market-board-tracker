@@ -25,7 +25,8 @@ export const columns: GridColDef[] = [
     field: "currentSaleValue",
     headerName: "Current Profit Per Item",
     flex: 1,
-    valueFormatter: (value: number) => {
+    valueFormatter: (value: number | undefined) => {
+      if (!value) return "API Issues.";
       return value.toLocaleString() + " gil";
     },
   },
@@ -51,7 +52,8 @@ export const columns: GridColDef[] = [
     field: "todaysProfitPotential",
     headerName: "Potential Profit Today",
     flex: 1,
-    valueFormatter: (value: number) => {
+    valueFormatter: (value: number | undefined) => {
+      if (!value) return "API Issues.";
       return value.toLocaleString() + " gil";
     },
   },

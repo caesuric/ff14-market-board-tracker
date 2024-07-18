@@ -340,11 +340,13 @@ const TrackByJob: FC<TrackByJobProps> = () => {
         item.averagePrice = historicalData.average_price_per_unit;
         item.medianPrice = historicalData.median_price;
         item.medianStackSize = historicalData.median_stack_size;
-        item.currentSaleValue = calculatePostTaxSaleValue(
-          currentData.current_min_price_nq - 1
-        );
-        item.todaysProfitPotential =
-          historicalData.nq_daily_sale_velocity * item.currentSaleValue;
+        if (!!currentData) {
+          item.currentSaleValue = calculatePostTaxSaleValue(
+            currentData.current_min_price_nq - 1
+          );
+          item.todaysProfitPotential =
+            historicalData.nq_daily_sale_velocity * item.currentSaleValue;
+        }
         item.possibleMoneyPerDay = Math.floor(
           (historicalData.median_price * historicalData.num_items_sold) / 30
         );
