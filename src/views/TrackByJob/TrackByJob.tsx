@@ -154,7 +154,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
               historicalJobStatus.operation_time_so_far
           );
           const duration = formatDuration({
-            seconds: highestDurationInSeconds,
+            seconds: Math.max(Math.floor(highestDurationInSeconds), 0),
           });
           setLoadingPercentage(finalPercentage);
           setLoadingMessage(`Time Remaining: ${duration}`);

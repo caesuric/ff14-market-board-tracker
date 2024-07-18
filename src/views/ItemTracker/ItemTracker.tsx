@@ -114,6 +114,7 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
         .map((item) => item.result?.ID);
       if (ids.length === 0) {
         setIsLoading(false);
+        setResults([]);
         return;
       }
       const currentDataJobUuid = await startGetCurrentMarketData(world, ids);
@@ -158,7 +159,7 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
               historicalJobStatus.operation_time_so_far
           );
           const duration = formatDuration({
-            seconds: highestDurationInSeconds,
+            seconds: Math.max(Math.floor(highestDurationInSeconds), 0),
           });
           setLoadingPercentage(finalPercentage);
           setLoadingMessage(`Time Remaining: ${duration}`);

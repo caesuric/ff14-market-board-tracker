@@ -53,7 +53,7 @@ export const checkHistoricalMarketDataJob = async (jobUuid: string) => {
 
 export const getCurrentMarketData = async (jobUuid: string) => {
   const response = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-current/results/${jobUuid}`
+    `https://xivmarketstats.com:1414/rest/market-current/result/${jobUuid}`
   );
   const responseData = await response.json();
   return responseData;
@@ -61,7 +61,7 @@ export const getCurrentMarketData = async (jobUuid: string) => {
 
 export const getHistoricalMarketData = async (jobUuid: string) => {
   const response = await fetch(
-    `https://xivmarketstats.com:1414/rest/market-historical/results/${jobUuid}`
+    `https://xivmarketstats.com:1414/rest/market-historical/result/${jobUuid}`
   );
   const responseData = await response.json();
   return responseData;
