@@ -2,9 +2,22 @@ import {
   Box,
   CircularProgress,
   CircularProgressProps,
+  styled,
   Typography,
 } from "@mui/material";
 import React from "react";
+
+const StyledGridOverlay = styled("div")(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  height: "100%",
+  backgroundColor:
+    theme.palette.mode === "light"
+      ? "rgba(255, 255, 255, 0.9)"
+      : "rgba(18, 18, 18, 0.9)",
+}));
 
 function CircularProgressWithLabel(
   props: CircularProgressProps & { value: number }
@@ -41,10 +54,10 @@ export const CustomLoadingOverlay = ({
   return () => {
     return (
       <>
-        {/* <StyledGridOverlay> */}
-        <CircularProgressWithLabel value={loadingPercentage} />
-        <Box sx={{ mt: 2 }}>{loadingMessage}</Box>
-        {/* </StyledGridOverlay> */}
+        <StyledGridOverlay>
+          <CircularProgressWithLabel value={loadingPercentage} />
+          <Box sx={{ mt: 2 }}>{loadingMessage}</Box>
+        </StyledGridOverlay>
       </>
     );
   };
