@@ -23,7 +23,7 @@ import {
   startGetCurrentMarketData,
   startGetHistoricalMarketData,
 } from "network-calls";
-import { formatDuration } from "date-fns";
+import { formatDistance } from "date-fns";
 import { CustomLoadingOverlay } from "components/CustomLoadingOverlay/CustomLoadingOverlay";
 
 interface ItemTrackerProps {}
@@ -111,12 +111,14 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
       setLowestTaxRateCities(taxRatesLowestCities);
       const ids = items
         .filter((item) => !item.loaded2)
-        .map((item) => item.result?.ID);
+        .map((item) => item.ffxivId);
       if (ids.length === 0) {
         setIsLoading(false);
         setResults([]);
         return;
       }
+      console.log(items);
+      console.log(ids);
       const currentDataJobUuid = await startGetCurrentMarketData(world, ids);
       const historicalDataJobUuid = await startGetHistoricalMarketData(
         world,
@@ -129,6 +131,7 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
         const historicalJobStatus = await checkCurrentMarketDataJob(
           historicalDataJobUuid
         );
+        console.log("statuses", currentJobStatus, historicalJobStatus);
         if (currentJobStatus.complete && historicalJobStatus.complete) {
           clearInterval(checkStatus);
           setLoadingPercentage(99.9);
@@ -137,16 +140,23 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
           const historicalData = await getHistoricalMarketData(
             historicalDataJobUuid
           );
+          console.log("results", currentData, historicalData);
           setCurrentResponseData(currentData);
           setHistoricalResponseData(historicalData);
         } else {
+          const timeInSeconds = new Date().getTime() / 1000;
+          const timeElapsedCurrent =
+            timeInSeconds - currentJobStatus.last_update;
+          const timeElapsedHistorical =
+            timeInSeconds - historicalJobStatus.last_update;
           const currentJobPercentage = Math.min(
-            currentJobStatus.operation_time_so_far /
+            (currentJobStatus.operation_time_so_far + timeElapsedCurrent) /
               currentJobStatus.estimated_operation_time,
             1
           );
           const historicalJobPercentage = Math.min(
-            historicalJobStatus.operation_time_so_far /
+            (historicalJobStatus.operation_time_so_far +
+              timeElapsedHistorical) /
               historicalJobStatus.estimated_operation_time,
             1
           );
@@ -154,13 +164,17 @@ const ItemTracker: FC<ItemTrackerProps> = () => {
             Math.min(currentJobPercentage, historicalJobPercentage) * 100;
           const highestDurationInSeconds = Math.max(
             currentJobStatus.estimated_operation_time -
-              currentJobStatus.operation_time_so_far,
+              currentJobStatus.operation_time_so_far -
+              timeElapsedCurrent,
             historicalJobStatus.estimated_operation_time -
-              historicalJobStatus.operation_time_so_far
+              historicalJobStatus.operation_time_so_far -
+              timeElapsedHistorical
           );
-          const duration = formatDuration({
-            seconds: Math.max(Math.floor(highestDurationInSeconds), 0),
-          });
+          const duration = formatDistance(
+            0,
+            Math.max(Math.floor(highestDurationInSeconds), 0) * 1000,
+            { includeSeconds: true }
+          );
           setLoadingPercentage(finalPercentage);
           setLoadingMessage(`Time Remaining: ${duration}`);
         }

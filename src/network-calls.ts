@@ -15,7 +15,8 @@ export const getTaxRates = async (world: string) => {
 };
 
 export const startGetCurrentMarketData = async (world: string, ids: any[]) => {
-  const idsCommaSeparated = ids.join(",");
+  let idsCommaSeparated = ids.join(",");
+  if (ids.length < 2) idsCommaSeparated = ids[0].toString();
   const currentResponse = await fetch(
     `https://xivmarketstats.com:1414/rest/market-current/start/${world}/${idsCommaSeparated}`
   );
@@ -27,7 +28,8 @@ export const startGetHistoricalMarketData = async (
   world: string,
   ids: any[]
 ) => {
-  const idsCommaSeparated = ids.join(",");
+  let idsCommaSeparated = ids.join(",");
+  if (ids.length < 2) idsCommaSeparated = ids[0].toString();
   const historicalResponse = await fetch(
     `https://xivmarketstats.com:1414/rest/market-current/start/${world}/${idsCommaSeparated}`
   );
@@ -55,14 +57,24 @@ export const getCurrentMarketData = async (jobUuid: string) => {
   const response = await fetch(
     `https://xivmarketstats.com:1414/rest/market-current/result/${jobUuid}`
   );
-  const responseData = await response.json();
-  return responseData;
+  try {
+    const responseData = await response.json();
+    return responseData;
+  } catch (e) {
+    console.error(e);
+    return {};
+  }
 };
 
 export const getHistoricalMarketData = async (jobUuid: string) => {
   const response = await fetch(
     `https://xivmarketstats.com:1414/rest/market-historical/result/${jobUuid}`
   );
-  const responseData = await response.json();
-  return responseData;
+  try {
+    const responseData = await response.json();
+    return responseData;
+  } catch (e) {
+    console.error(e);
+    return {};
+  }
 };
