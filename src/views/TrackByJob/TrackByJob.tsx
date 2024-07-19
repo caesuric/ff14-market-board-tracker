@@ -275,6 +275,15 @@ const TrackByJob: FC<TrackByJobProps> = () => {
         icon: item.icon_path,
         loaded: false,
         loaded2: false,
+        result: {
+          ID: item.id,
+          _Score: 0,
+          Name: item.name,
+          _: "",
+          Url: "",
+          UrlType: "",
+          Icon: item.icon_path,
+        },
       });
     }
     setItemsToTrack([...itemsToTrack]);
