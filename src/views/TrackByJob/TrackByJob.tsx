@@ -26,6 +26,7 @@ import {
 import { formatDistance } from "date-fns";
 import { CustomLoadingOverlay } from "components/CustomLoadingOverlay/CustomLoadingOverlay";
 import { clamp } from "calculations";
+import { BASE_URL } from "common-data/constants";
 
 interface TrackByJobProps {}
 
@@ -70,9 +71,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
   };
   const pullCraftingTypes = async () => {
     try {
-      const craftingTypesResponse = await fetch(
-        "https://xivmarketstats.com:1414/rest/crafting-types/"
-      );
+      const craftingTypesResponse = await fetch(`${BASE_URL}/crafting-types`);
       const craftingTypesData = await craftingTypesResponse.json();
       setCraftingTypes(craftingTypesData);
     } catch (e) {
@@ -234,21 +233,21 @@ const TrackByJob: FC<TrackByJobProps> = () => {
     const items = [];
     if (miningSelected) {
       const miningItems = await fetch(
-        `https://xivmarketstats.com:1414/rest/items-by-job/Mining/${levelSliderMin}-${levelSliderMax}`
+        `${BASE_URL}/items-by-job/Mining/${levelSliderMin}-${levelSliderMax}`
       );
       const miningItemsData = await miningItems.json();
       for (const item of miningItemsData) items.push(item);
     }
     if (botanySelected) {
       const botanyItems = await fetch(
-        `https://xivmarketstats.com:1414/rest/items-by-job/Botany/${levelSliderMin}-${levelSliderMax}`
+        `${BASE_URL}/items-by-job/Botany/${levelSliderMin}-${levelSliderMax}`
       );
       const botanyItemsData = await botanyItems.json();
       for (const item of botanyItemsData) items.push(item);
     }
     if (fishingSelected) {
       const fishingItems = await fetch(
-        `https://xivmarketstats.com:1414/rest/items-by-job/Fishing/${levelSliderMin}-${levelSliderMax}`
+        `${BASE_URL}/items-by-job/Fishing/${levelSliderMin}-${levelSliderMax}`
       );
       const fishingItemsData = await fishingItems.json();
       for (const item of fishingItemsData) items.push(item);
@@ -256,7 +255,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
     for (const craftingType in craftingSelections) {
       if (!craftingSelections[craftingType]) continue;
       const craftingItems = await fetch(
-        `https://xivmarketstats.com:1414/rest/items-by-job/${craftingType}/${levelSliderMin}-${levelSliderMax}`
+        `${BASE_URL}/items-by-job/${craftingType}/${levelSliderMin}-${levelSliderMax}`
       );
       const craftingItemsData = await craftingItems.json();
       for (const item of craftingItemsData) items.push(item);
@@ -270,9 +269,10 @@ const TrackByJob: FC<TrackByJobProps> = () => {
     for (const item of items) {
       if (itemsToTrack.find((i) => i.result?.ID === item)) continue;
       itemsToTrack.push({
-        text: "",
+        text: item.name,
         id: uuid.v4(),
-        ffxivId: item,
+        ffxivId: item.id,
+        icon: item.icon_path,
         loaded: false,
         loaded2: false,
       });
