@@ -272,7 +272,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
         text: item.name,
         id: uuid.v4(),
         ffxivId: item.id,
-        icon: item.icon_path,
+        icon: `${item.icon_path}.png`,
         loaded: false,
         loaded2: false,
         result: {
@@ -282,7 +282,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
           _: "",
           Url: "",
           UrlType: "",
-          Icon: item.icon_path,
+          Icon: `${item.icon_path}.png`,
         },
       });
     }
