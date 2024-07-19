@@ -184,7 +184,7 @@ const TrackByJob: FC<TrackByJobProps> = () => {
               Math.max(Math.floor(highestDurationInSeconds), 0) * 1000,
               { includeSeconds: true }
             );
-            setLoadingPercentage(clamp(finalPercentage, 0, 99.9));
+            setLoadingPercentage(clamp(finalPercentage, 0, 99));
             setLoadingMessage(`Estimated Time Remaining: ${duration}`);
           }
         });
